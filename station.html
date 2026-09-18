@@ -545,7 +545,7 @@
     </div>
     <br>
     <br>
-    <a href="https://hydrographarchive.z20.web.core.windows.net/gif_generator.html" target="_blank"
+    <a href="https://jismon003.github.io/FloodingDashboard/gif_generator.html" target="_blank"
         style="font-weight:bold">GIF Generator</a>
     <br>
     <footer id="siteFooter">
@@ -556,18 +556,29 @@
 
     <script>
         window.history.scrollRestoration = 'manual';
-        const accountUrl = "https://hydrographarchive.blob.core.windows.net";
-        const container = "$web";
-        const sasToken = "sp=rl&st=2025-09-09T17:44:42Z&se=2035-02-02T02:59:42Z&spr=https&sv=2024-11-04&sr=c&sig=UOgYKdx4m17fcGGgfzQB002pKOpbw%2FI67SBuuJxkIoI%3D";
-        async function listBlobs(path) {
-            const url = `${accountUrl}/${container}?restype=container&comp=list&prefix=${encodeURIComponent(path)}&delimiter=/&${sasToken}`;
-            const res = await fetch(url);
-            const text = await res.text();
-            const parser = new DOMParser();
-            const xml = parser.parseFromString(text, "application/xml");
 
-            const files = [...xml.getElementsByTagName("Name")].map(n => n.textContent).filter(n => !n.endsWith("/"));
-            const dirs = [...xml.getElementsByTagName("Name")].map(n => n.textContent).filter(n => n.endsWith("/"));
+        const accountUrl = "https://jismon003.github.io/FloodingDashboard";
+        const container = "Data";
+
+        async function listBlobs(path) {
+            const cleanPath = path.replace(/^\/+|\/+$/g, "");
+            const apiUrl = cleanPath
+                ? `https://api.github.com/repos/Jismon003/FloodingDashboard/contents/Data/${cleanPath}`
+                : `https://api.github.com/repos/Jismon003/FloodingDashboard/contents/Data`;
+
+            const res = await fetch(apiUrl);
+            if (!res.ok) throw new Error(`GitHub request failed: ${res.status}`);
+            const items = await res.json();
+
+            const files = items.filter(item => item.type === "file").map(item => {
+                const prefix = cleanPath ? `${cleanPath}/` : "";
+                return `${prefix}${item.name}`;
+            });
+
+            const dirs = items.filter(item => item.type === "dir").map(item => {
+                const prefix = cleanPath ? `${cleanPath}/` : "";
+                return `${prefix}${item.name}/`;
+            });
 
             return { files, dirs };
         }
@@ -588,7 +599,8 @@
 
         // --- UTILITIES ---
         function buildBlobUrl(path) {
-            return `${accountUrl}/${container}/${path}?${sasToken}`;
+            const cleanPath = path.replace(/^\/+/, "");
+            return `${accountUrl}/${container}/${cleanPath}`;
         }
 
         function mapStevensToModel(runHour) {

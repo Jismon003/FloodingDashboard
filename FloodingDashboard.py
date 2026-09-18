@@ -1,6 +1,7 @@
 import asyncio
 import os
 import re
+import shutil
 from pyppeteer import launch
 import urllib.request
 from urllib.parse import urljoin, urlparse
@@ -340,10 +341,18 @@ XPATH_IMAGE_1 = "/html/body/div[7]/div[2]/div/div[2]/div[1]/img"
 XPATH_IMAGE_2 = "/html/body/div[7]/div[2]/div/div[4]/div/img"
 
 def find_browser():
+    # Windows Chrome/Edge
     for path in CHROME_CANDIDATES:
         if os.path.exists(path):
             return path
-    raise FileNotFoundError("Could not find Chrome/Edge.")
+
+    # Linux / GitHub Actions Chromium
+    for browser in ["chromium", "chromium-browser", "google-chrome", "google-chrome-stable"]:
+        path = shutil.which(browser)
+        if path:
+            return path
+
+    raise FileNotFoundError("Could not find Chrome/Edge/Chromium.")
 
 async def set_input_value(page, xpath, value):
     elem = await page.waitForXPath(xpath, {"timeout": 15000})
@@ -892,7 +901,13 @@ async def fetch_once():
     browser = await launch(
         headless=True,
         executablePath=browser_path,
-        args=["--disable-gpu", "--no-first-run", "--no-default-browser-check"]
+        args=[
+            "--disable-gpu",
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
+            "--no-first-run",
+            "--no-default-browser-check"
+        ]
     )
 
     try:

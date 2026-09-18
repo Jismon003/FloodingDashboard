@@ -194,9 +194,9 @@ baseline_template = cv2.cvtColor(pattern_rgb, cv2.COLOR_RGB2BGR)
 # GITHUB REPOSITORY CONFIG
 # ==========================
 # The Python program lives in the cloned FloodingDashboard repository.
-# All published data is stored under /Data/.
+# All published data is stored under /Data/Working/.
 REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(REPO_ROOT, "Data")
+DATA_DIR = os.path.join(REPO_ROOT, "Data", "Working")
 os.makedirs(DATA_DIR, exist_ok=True)
 
 def save_to_repository(local_file: str, remote_path: str):
@@ -220,7 +220,7 @@ def save_to_repository(local_file: str, remote_path: str):
 
 
 def git_publish_repository():
-    """Commit and push changed /Data files to GitHub."""
+    """Commit and push changed /Data/Working files to GitHub."""
     try:
         import subprocess
 
@@ -591,7 +591,7 @@ async def fetch_stevens(browser, station_name, station_code, valid_dates, dropdo
                 tide_file = os.path.join(TEMP_DIR, f"{ts} - {station_name} for {date_value}-Tide.png")
                 urllib.request.urlretrieve(src1, tide_file)
                 analyze_and_annotate(tide_file)
-                save_to_repository(tide_file, f"{AZURE_PREFIX}{station_name}/Stevens/{date_str}/{run_time}/{os.path.basename(tide_file)}")
+                save_to_repository(tide_file, f"{station_name}/Stevens/{date_str}/{run_time}/{os.path.basename(tide_file)}")
 
                 # Surge
                 el2 = await page.waitForXPath(XPATH_IMAGE_2, {"timeout": 30000})
@@ -601,7 +601,7 @@ async def fetch_stevens(browser, station_name, station_code, valid_dates, dropdo
                 surge_file = os.path.join(TEMP_DIR, f"{ts} - {station_name} for {date_value}-Surge.png")
                 urllib.request.urlretrieve(src2, surge_file)
                 analyze_and_annotate_surge(surge_file, station_name)
-                save_to_repository(surge_file, f"{AZURE_PREFIX}{station_name}/Stevens/{date_str}/{run_time}/{os.path.basename(surge_file)}")
+                save_to_repository(surge_file, f"{station_name}/Stevens/{date_str}/{run_time}/{os.path.basename(surge_file)}")
 
             except Exception as e:
                 log(f"ERROR fetching Stevens for {station_name} on {date_value}: {e}")
@@ -627,7 +627,7 @@ async def fetch_stevens(browser, station_name, station_code, valid_dates, dropdo
             analyze_and_annotate(tide_5day)
             save_to_repository(
                 tide_5day,
-                f"{AZURE_PREFIX}{station_name}/Stevens/Composite/{run_time}/{os.path.basename(tide_5day)}"
+                f"{station_name}/Stevens/Composite/{run_time}/{os.path.basename(tide_5day)}"
             )
 
             # Surge 5-day
@@ -640,7 +640,7 @@ async def fetch_stevens(browser, station_name, station_code, valid_dates, dropdo
             analyze_and_annotate_surge(surge_5day, station_name)
             save_to_repository(
                 surge_5day,
-                f"{AZURE_PREFIX}{station_name}/Stevens/Composite/{run_time}/{os.path.basename(surge_5day)}"
+                f"{station_name}/Stevens/Composite/{run_time}/{os.path.basename(surge_5day)}"
             )
 
         except Exception as e:
@@ -728,7 +728,7 @@ async def fetch_tropicaltidbits(browser, name, model, region, product):
                 img_bytes = await resp.buffer()
                 with open(local_path, "wb") as f:
                     f.write(img_bytes)
-                remote_path = f"{AZURE_PREFIX}Models/{run_date_hour}/{model_dir}/{filename}"
+                remote_path = f"Models/{run_date_hour}/{model_dir}/{filename}"
                 save_to_repository(local_path, remote_path)
                 #log(f"Saved {name} {model} {product} run={run_id} fh={fh} into {remote_path}")
     except Exception as e:
@@ -790,7 +790,7 @@ def fetch_pivotalweather(name, model, product, region):
                     # Build the desired filename and folder structure
                     filename = f"{run_id}_{model}_{product}_{region}_{fh}.png"
                     local_path = os.path.join(TEMP_DIR, filename)
-                    remote_path = f"{AZURE_PREFIX}Models/{run_id}/{model}/{filename}"
+                    remote_path = f"Models/{run_id}/{model}/{filename}"
 
                     # Download image directly
                     urllib.request.urlretrieve(url, local_path)
@@ -800,7 +800,7 @@ def fetch_pivotalweather(name, model, product, region):
                         log(f"SKIPPED (empty file): {filename}")
                         os.remove(local_path)
                         continue
-                    # Upload to Azure
+                    # Save to GitHub repository
                     save_to_repository(local_path, remote_path)
                 except Exception as e:
                     log(f"ERROR fetching Pivotal {model} fh={fh} run={run_id}: {e}")
@@ -834,7 +834,7 @@ def fetch_nws(station_name, nws_url):
 
         urllib.request.urlretrieve(nws_url, filename)
 
-        remote_path = f"{AZURE_PREFIX}{station_name}/NWS/{run_time}/{os.path.basename(filename)}"
+        remote_path = f"{station_name}/NWS/{run_time}/{os.path.basename(filename)}"
         save_to_repository(filename, remote_path)
 
     except Exception as e:
@@ -874,7 +874,7 @@ def fetch_petss(station_name, urls):
                 except Exception as e:
                     log(f"WARNING: Could not annotate {station_name} {label}: {e}")
 
-                remote_path = f"{AZURE_PREFIX}{station_name}/PETSS/{run_time}/{os.path.basename(filename)}"
+                remote_path = f"{station_name}/PETSS/{run_time}/{os.path.basename(filename)}"
                 save_to_repository(filename, remote_path)
 
             except Exception as e:

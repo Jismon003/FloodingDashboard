@@ -95,10 +95,7 @@
 
 <body class="dark">
 
-  <label id="titleLabel">
-    Monmouth/Ocean County<br>
-    Hydrograph Index (Beta)
-  </label>
+  <label id="titleLabel">Monmouth/Ocean County<br>Hydrograph Index (Beta)</label>
 
   <div id="stationList">
 
@@ -114,29 +111,19 @@
 
   <br>
 
-  <a href="https://jismon003.github.io/FloodingDashboard/map.html"
-     target="_blank"
-     style="font-size:18px; margin-bottom:15px;">
+  <a href="https://jismon003.github.io/FloodingDashboard/map.html" target="_blank"
+    style="font-size:18px; margin-bottom:15px;">
 
     Water and Weather Map
 
   </a>
 
-  <a href="https://jismon003.github.io/FloodingDashboard/3D%20map.html"
-     target="_blank"
-     style="font-size:18px; margin-bottom:15px;">
+  <a href="https://jismon003.github.io/FloodingDashboard/3D%20map.html" target="_blank"
+    style="font-size:18px; margin-bottom:15px;">Google Photorealstic 3D Tile Map</a>
 
-    Google Photorealstic 3D Tile Map
+  <a href="gif_generator.html" target="_blank" style="font-size:18px; margin-bottom:15px;">Station Trend GIF
 
-  </a>
-
-  <a href="gif_generator.html"
-     target="_blank"
-     style="font-size:18px; margin-bottom:15px;">
-
-    Station Trend GIF Generator
-
-  </a>
+    Generator</a>
 
   <footer id="siteFooter">
 
@@ -148,42 +135,40 @@
 
   <script>
 
-    /*
-     * Station folders inside:
-     *
-     * https://jismon003.github.io/FloodingDashboard/Data/
-     *
-     * Add/remove station names here to match the folders
-     * in the Data directory.
-     */
-
-    const stations = [
-      // "Station_Name_1",
-      // "Station_Name_2",
-      // "Station_Name_3"
-    ];
-
     async function loadStations() {
 
       const listDiv = document.getElementById("list");
 
-      if (!stations.length) {
+      const dirs = [
+        "Barnaget Light/",
+        "Keansburg/",
+        "Manasquan/",
+        "Mantoloking/",
+        "Sandy Hook/",
+        "Sea Bright/",
+        "Ship Bottom/",
+        "Tuckerton/"
+      ];
+
+      if (!dirs.length) {
+
         listDiv.textContent = "No stations found.";
+
         return;
+
       }
 
-      stations
-        .filter(d =>
-          !d.toLowerCase().includes("test") &&
-          !d.toLowerCase().includes("models")
-        )
-        .forEach(station => {
+      dirs
+        .filter(d => !d.toLowerCase().includes("test") && !d.toLowerCase().includes("models"))
+        .forEach(d => {
+
+          const station = d.replace(/\/$/, "");
 
           const a = document.createElement("a");
 
           a.href = `station.html?station=${encodeURIComponent(station)}`;
 
-          a.textContent = station.replace(/_/g, " ");
+          a.textContent = station.replace(/\_/g, " ");
 
           a.style.fontSize = "18px";
 

@@ -901,7 +901,13 @@ async def fetch_once():
     browser = await launch(
         headless=True,
         executablePath=browser_path,
-        args=["--disable-gpu", "--no-first-run", "--no-default-browser-check"]
+        args=[
+            "--disable-gpu",
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
+            "--no-first-run",
+            "--no-default-browser-check"
+        ]
     )
 
     try:

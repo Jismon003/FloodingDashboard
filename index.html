@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+  <title>Monmouth/Ocean County Hydrograph Index (beta)</title>
+  <style>
+    :root {
+      --bg: #c8c8c8;
+      --text: black;
+      --link: #0066cc;
+      --link-hover: #004c99;
+      --bar-bg: rgba(200, 200, 200, 0.9);
+      --caption: black;
+    }
+
+    body.dark {
+      --bg: #000;
+      --text: white;
+      --link: #66f;
+      --link-hover: #99f;
+      --bar-bg: rgba(0, 0, 0, 0.85);
+      --caption: #ccc;
+    }
+
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    a {
+      color: var(--link);
+      text-decoration: none;
+    }
+
+    a:hover {
+      color: var(--link-hover);
+      text-decoration: underline;
+    }
+
+    #titleLabel {
+      width: 100%;
+      text-align: center;
+      padding: 20px 0;
+      background: var(--bar-bg);
+      color: var(--caption);
+      font-size: 20px;
+      font-weight: bold;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+    }
+
+    #stationList {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 30px;
+    }
+
+    #list {
+      text-align: center;
+    }
+
+    #list a {
+      display: block;
+      margin-bottom: 12px;
+    }
+
+    #siteFooter {
+      width: 100%;
+      text-align: center;
+      padding: 15px 0;
+      background: var(--bar-bg);
+      color: var(--caption);
+      font-size: 14px;
+      border-top: 1px solid rgba(0, 0, 0, 0.2);
+      margin-top: auto;
+    }
+  </style>
+</head>
+
+<body class="dark">
+  <label id="titleLabel">Monmouth/Ocean County<br>Hydrograph Index (Beta)</label>
+
+  <div id="stationList">
+    <h2>Available Stations</h2>
+    <div id="list"></div>
+  </div>
+  <br>
+  <h2>Projects</h2>
+  <br>
+  <a href="https://hydrographarchive.z20.web.core.windows.net/map.html" target="_blank"
+    style="font-size:18px; margin-bottom:15px;">
+    Water and Weather Map
+  </a>
+  <a href="https://hydrographarchive.blob.core.windows.net/$web/3D%20map.html" target="_blank"
+    style="font-size:18px; margin-bottom:15px;">Google Photorealstic 3D Tile Map</a>
+  <a href="gif_generator.html" target="_blank" style="font-size:18px; margin-bottom:15px;">Station Trend GIF
+    Generator</a>
+  <footer id="siteFooter">
+    Copyright &copy; 2025 Simon, Jacob — Hosted by Sea Bright Fire/Rescue<br>
+    Contact: JakeSimon003@gmail.com
+  </footer>
+
+  <script>
+    const accountUrl = "https://hydrographarchive.blob.core.windows.net";
+    const container = "$web";
+    const sasToken = "sp=rl&st=2025-09-09T17:44:42Z&se=2035-02-02T02:59:42Z&spr=https&sv=2024-11-04&sr=c&sig=UOgYKdx4m17fcGGgfzQB002pKOpbw%2FI67SBuuJxkIoI%3D";
+
+    async function listBlobs(path) {
+      const url = `${accountUrl}/${container}?restype=container&comp=list&prefix=${encodeURIComponent(path)}&delimiter=/&${sasToken}`;
+      const res = await fetch(url);
+      const text = await res.text();
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(text, "application/xml");
+      const dirs = [...xml.getElementsByTagName("Name")].map(n => n.textContent).filter(n => n.endsWith("/"));
+      return { dirs };
+    }
+
+    async function loadStations() {
+      const listDiv = document.getElementById("list");
+      const { dirs } = await listBlobs("");
+      if (!dirs.length) {
+        listDiv.textContent = "No stations found.";
+        return;
+      }
+      dirs
+        .filter(d => !d.toLowerCase().includes("test") && !d.toLowerCase().includes("models"))
+        .forEach(d => {
+          const station = d.replace(/\/$/, "");
+          const a = document.createElement("a");
+          a.href = `station.html?station=${encodeURIComponent(station)}`;
+          a.textContent = station.replace(/_/g, " ");
+          a.style.fontSize = "18px";
+          listDiv.appendChild(a);
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", loadStations);
+  </script>
+</body>
+
+</html>

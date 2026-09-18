@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GIF Generator</title>
+<style>
+  body {
+    background-color: black;
+    color: white;
+    font-family: sans-serif;
+    margin: 0;
+    padding: 20px;
+  }
+  main {
+    width: 50%;
+    min-width: 480px;
+    max-width: 960px;
+  }
+
+  .container {
+    display: flex;
+    align-items: flex-start;
+    gap: 30px;
+    flex-wrap: wrap;
+  }
+
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1 1 280px;
+    max-width: 350px;
+  }
+
+  select, button, input {
+    font-size: 14px;
+    padding: 6px 10px;
+    border-radius: 5px;
+    border: none;
+    outline: none;
+  }
+
+  select, input {
+    background: #222;
+    color: white;
+  }
+
+  button {
+    background-color: #444;
+    color: white;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  button:hover {
+    background-color: #666;
+  }
+
+#gifPreview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #111;
+  border: 1px solid #555;
+  font-size: 16px;
+  text-align: center;
+  width: 600px;
+  height: 400px;
+  margin-top: 20px;
+  overflow: hidden;
+}
+
+/* make contained image scale automatically */
+#gifPreview img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+/* responsive scaling for mobile */
+@media (max-width: 900px) {
+  #gifPreview {
+    width: 100%;
+    height: auto;
+    margin-top: 20px;
+  }
+}
+
+
+</style>
+<script src="https://cdn.jsdelivr.net/npm/gif.js.optimized/dist/gif.js"></script>
+</head>
+<body>
+<main>
+<h2>GIF Generator</h2>
+
+<div class="container">
+  <div class="controls">
+    <label>Station:
+      <select id="stationSelect"></select>
+    </label>
+
+    <label>Image Type:
+      <select id="imageType">
+        <option value="Tide">Tide</option>
+        <option value="Surge">Surge</option>
+      </select>
+    </label>
+
+    <label>Forecast Date:
+      <select id="forecastDate"></select>
+    </label>
+
+    <label>Start Date:
+      <select id="startDate"></select>
+    </label>
+
+    <label>Start Hour:
+      <select id="startHour"></select>
+    </label>
+
+    <label>End Date:
+      <select id="endDate"></select>
+    </label>
+
+    <label>End Hour:
+      <select id="endHour"></select>
+    </label>
+
+    <label>Frames Per Second:
+      <input type="number" id="fpsInput" value="3" min="1" max="30" step="1" style="width:60px;">
+    </label>
+    <div id="frameCountBox" style="font-size:14px; color:#ccc; margin-top:4px;">
+      Total Frames: <span id="frameCount">0</span>
+    </div>
+    <button id="maxRangeBtn">Max Available</button>
+    <button id="generateBtn">Generate GIF</button>
+  </div>
+  <div id="gifPreview">Generated GIF will appear here</div>
+</div>
+</main>
+<script>
+  // ============================================================
+  // CONFIGURATION
+  // ============================================================
+  const accountUrl = "https://hydrographarchive.blob.core.windows.net";
+  const container = "$web";
+  const sasToken =
+    "sp=rl&st=2025-09-09T17:44:42Z&se=2035-02-02T02:59:42Z&spr=https&sv=2024-11-04&sr=c&sig=UOgYKdx4m17fcGGgfzQB002pKOpbw%2FI67SBuuJxkIoI%3D";
+
+  // ============================================================
+  // STATION LIST
+  // ============================================================
+  const stations = [
+    "Barnaget_Light",
+    "Keansburg",
+    "Manasquan",
+    "Mantoloking",
+    "Sandy_Hook",
+    "Sea_Bright",
+    "Ship_Bottom",
+    "Tuckerton"
+  ];
+
+  const stationSel = document.getElementById("stationSelect");
+  const forecastDateSel = document.getElementById("forecastDate");
+  const startDateSel = document.getElementById("startDate");
+  const endDateSel = document.getElementById("endDate");
+  const startHourSel = document.getElementById("startHour");
+  const endHourSel = document.getElementById("endHour");
+
+  stationSel.add(new Option("-- Select Station --", ""));
+  stations.forEach(st => {
+    const opt = new Option(st.replace(/_/g, " "), st);
+    stationSel.add(opt);
+  });
+
+  async function listBlobs(prefix = "") {
+    let marker = "";
+    let allDirs = [];
+
+    do {
+      const url = `${accountUrl}/${container}?restype=container&comp=list&prefix=${encodeURIComponent(prefix)}&delimiter=/&marker=${marker}&${sasToken}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`List failed: ${res.status} ${res.statusText}`);
+
+      const text = await res.text();
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(text, "application/xml");
+      const dirs = [...xml.querySelectorAll("BlobPrefix")].map(b => b.querySelector("Name").textContent);
+      allDirs.push(...dirs);
+
+      const nextMarker = xml.querySelector("NextMarker");
+      marker = nextMarker && nextMarker.textContent ? nextMarker.textContent : "";
+    } while (marker);
+
+    return allDirs;
+  }
+
+  // Helper to format YYYYMMDD → MM-DD-YYYY
+  function formatDateLabel(yyyymmdd) {
+    const y = yyyymmdd.slice(0, 4);
+    const m = yyyymmdd.slice(4, 6);
+    const d = yyyymmdd.slice(6, 8);
+    return `${m}-${d}-${y}`;
+  }
+
+  stationSel.addEventListener("change", async () => {
+    const station = stationSel.value;
+    forecastDateSel.innerHTML = "";
+    startDateSel.innerHTML = "";
+    endDateSel.innerHTML = "";
+    startHourSel.innerHTML = "";
+    endHourSel.innerHTML = "";
+
+    if (!station) return;
+
+    const prefix = `${station}/Stevens/`;
+    const dirs = await listBlobs(prefix);
+
+    const forecastDates = dirs
+      .map(d => d.replace(prefix, "").replace(/\/$/, ""))
+      .filter(d => /^\d{8}$/.test(d))
+      .sort((a, b) => {
+        const [hourA, dateA] = a.split("_");
+        const [hourB, dateB] = b.split("_");
+        if (dateA !== dateB) return dateA.localeCompare(dateB);
+        return parseInt(hourA) - parseInt(hourB);
+      });
+
+
+    forecastDateSel.add(new Option("-- Select Forecast Date --", ""));
+    forecastDates.forEach(d => {
+      const opt = new Option(formatDateLabel(d), d);
+      forecastDateSel.add(opt);
+    });
+  });
+
+  let runtimeMap = {};
+
+  forecastDateSel.addEventListener("change", async () => {
+    const station = stationSel.value;
+    const forecastDate = forecastDateSel.value;
+
+    startDateSel.innerHTML = "";
+    endDateSel.innerHTML = "";
+    startHourSel.innerHTML = "";
+    endHourSel.innerHTML = "";
+
+    if (!station || !forecastDate) return;
+
+    const prefix = `${station}/Stevens/${forecastDate}/`;
+    const dirs = await listBlobs(prefix);
+
+    const runtimes = dirs
+      .map(d => d.replace(prefix, "").replace(/\/$/, ""))
+      .filter(d => /^\d{2}_\d{8}$/.test(d))
+      .sort((a, b) => b.localeCompare(a));
+
+    runtimeMap = {};
+    runtimes.forEach(rt => {
+      const [hour, date] = rt.split("_");
+      if (!runtimeMap[date]) runtimeMap[date] = [];
+      runtimeMap[date].push(hour);
+    });
+
+    const uniqueDates = Object.keys(runtimeMap).sort((a, b) => a.localeCompare(b));
+    startDateSel.add(new Option("-- Select Start Date --", ""));
+    endDateSel.add(new Option("-- Select End Date --", ""));
+
+    uniqueDates.forEach(date => {
+      startDateSel.add(new Option(formatDateLabel(date), date));
+      endDateSel.add(new Option(formatDateLabel(date), date));
+    });
+  });
+
+  function loadHoursForDate(date, dropdown) {
+    dropdown.innerHTML = "";
+    if (!runtimeMap[date]) return;
+    const hours = runtimeMap[date].sort((a, b) => a.localeCompare(b));
+    dropdown.add(new Option("-- Select Hour --", ""));
+    hours.forEach(h => dropdown.add(new Option(h, h)));
+  }
+
+  startDateSel.addEventListener("change", () => {
+  loadHoursForDate(startDateSel.value, startHourSel);
+
+  // Prevent selecting an end date earlier than the start date
+  const startDateValue = startDateSel.value;
+  if (!startDateValue) return;
+
+  // Filter out invalid end dates
+  for (let i = 0; i < endDateSel.options.length; i++) {
+    const opt = endDateSel.options[i];
+    if (opt.value && opt.value < startDateValue) {
+      opt.disabled = true;
+      opt.style.color = "#666"; // gray out older options
+    } else {
+      opt.disabled = false;
+      opt.style.color = "white";
+    }
+  }
+
+  // If the current end date is invalid, reset selection
+  if (endDateSel.value && endDateSel.value < startDateValue) {
+    endDateSel.value = "";
+    endHourSel.innerHTML = "";
+  }
+});
+
+  endDateSel.addEventListener("change", () => loadHoursForDate(endDateSel.value, endHourSel));
+
+  function loadImage(url) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = url;
+    });
+  }
+
+  
+async function updateFrameCount() {
+  const forecastDate = forecastDateSel.value;
+  const startDate = startDateSel.value;
+  const startHour = startHourSel.value;
+  const endDate = endDateSel.value;
+  const endHour = endHourSel.value;
+
+  if (!forecastDate || !startDate || !startHour || !endDate || !endHour) {
+    document.getElementById("frameCount").textContent = "0";
+    return;
+  }
+
+  const prefix = `${stationSel.value}/Stevens/${forecastDate}/`;
+  const allDirs = await listBlobs(prefix);
+  const allRuns = allDirs
+    .map(d => d.replace(prefix, "").replace(/\/$/, ""))
+    .filter(d => /^\d{2}_\d{8}$/.test(d))
+    .sort((a, b) => {
+      const [hourA, dateA] = a.split("_");
+      const [hourB, dateB] = b.split("_");
+      if (dateA !== dateB) return dateA.localeCompare(dateB);
+      return parseInt(hourA) - parseInt(hourB);
+    });
+
+  const startKey = `${startHour}_${startDate}`;
+  const endKey = `${endHour}_${endDate}`;
+  const [lowKey, highKey] = startKey < endKey ? [startKey, endKey] : [endKey, startKey];
+  const selectedRuns = allRuns.filter(rt => {
+    const [hour, date] = rt.split("_");
+    const key = parseInt(`${date}${hour.padStart(2, "0")}`);
+    const startKeyNum = parseInt(`${startDate}${startHour.padStart(2, "0")}`);
+    const endKeyNum = parseInt(`${endDate}${endHour.padStart(2, "0")}`);
+    const low = Math.min(startKeyNum, endKeyNum);
+    const high = Math.max(startKeyNum, endKeyNum);
+    return key >= low && key <= high;
+  });
+
+
+  console.log(`🧮 Frame count update: ${selectedRuns.length} frames`);
+  document.getElementById("frameCount").textContent = selectedRuns.length;
+}
+
+[forecastDateSel, startDateSel, startHourSel, endDateSel, endHourSel].forEach(sel => {
+  sel.addEventListener("change", updateFrameCount);
+});
+// ============================================================
+// Max BUTTON
+// ============================================================
+document.getElementById("maxRangeBtn").addEventListener("click", () => {
+  if (!Object.keys(runtimeMap).length) {
+    alert("Please select a station and forecast date first.");
+    return;
+  }
+
+  const dates = Object.keys(runtimeMap).sort((a, b) => a.localeCompare(b));
+  const earliestDate = dates[0];
+  const latestDate = dates[dates.length - 1];
+
+  const earliestHour = runtimeMap[earliestDate].sort((a, b) => a.localeCompare(b))[0];
+  const latestHour = runtimeMap[latestDate].sort((a, b) => a.localeCompare(b)).slice(-1)[0];
+
+  startDateSel.value = earliestDate;
+  loadHoursForDate(earliestDate, startHourSel);
+  startHourSel.value = earliestHour;
+
+  endDateSel.value = latestDate;
+  loadHoursForDate(latestDate, endHourSel);
+  endHourSel.value = latestHour;
+
+  const allRuns = Object.entries(runtimeMap)
+    .flatMap(([date, hours]) => hours.map(h => `${h}_${date}`))
+    .sort((a, b) => {
+      const [hourA, dateA] = a.split("_");
+      const [hourB, dateB] = b.split("_");
+      if (dateA !== dateB) return dateA.localeCompare(dateB);
+      return parseInt(hourA) - parseInt(hourB);
+    });
+
+  const startKeyNum = parseInt(`${earliestDate}${earliestHour.padStart(2, "0")}`);
+  const endKeyNum = parseInt(`${latestDate}${latestHour.padStart(2, "0")}`);
+
+  const selectedRuns = allRuns.filter(rt => {
+    const [hour, date] = rt.split("_");
+    const key = parseInt(`${date}${hour.padStart(2, "0")}`);
+    return key >= startKeyNum && key <= endKeyNum;
+  });
+
+  document.getElementById("frameCount").textContent = selectedRuns.length;
+  console.log(`⏱️ Max range applied: ${earliestHour}_${earliestDate} → ${latestHour}_${latestDate} (${selectedRuns.length} frames)`);
+});
+
+// ============================================================
+// GENERATE BUTTON 
+// ============================================================
+document.getElementById("generateBtn").addEventListener("click", async () => {
+  const station = stationSel.value;
+  const forecastDate = forecastDateSel.value;
+  const startDate = startDateSel.value;
+  const startHour = startHourSel.value;
+  const endDate = endDateSel.value;
+  const endHour = endHourSel.value;
+  const fps = parseFloat(document.getElementById("fpsInput").value) || 3;
+
+  const preview = document.getElementById("gifPreview");
+  preview.textContent = "Generating GIF...";
+
+  if (!station || !forecastDate || !startDate || !startHour || !endDate || !endHour) {
+    preview.textContent = "⚠️ Please select all fields before generating.";
+    return;
+  }
+
+  // Base directory for this forecast
+  const forecastPrefix = `${station}/Stevens/${forecastDate}/`;
+
+  const allDirs = await listBlobs(forecastPrefix);
+  const allRuns = allDirs
+  .map(d => d.replace(forecastPrefix, "").replace(/\/$/, ""))
+  .filter(d => /^\d{2}_\d{8}$/.test(d))
+  .sort((a, b) => {
+    const [hourA, dateA] = a.split("_");
+    const [hourB, dateB] = b.split("_");
+    if (dateA !== dateB) return dateA.localeCompare(dateB);
+    return parseInt(hourA) - parseInt(hourB);
+  });
+
+    // Normalize start/end and include ALL run hours between the dates
+  let startKey = `${startHour}_${startDate}`;
+  let endKey = `${endHour}_${endDate}`;
+  if (startKey > endKey) [startKey, endKey] = [endKey, startKey];
+
+  const startDateNum = parseInt(startDate);
+  const endDateNum = parseInt(endDate);
+
+  const selectedRuns = allRuns.filter(rt => {
+    const [hour, date] = rt.split("_");
+    const dateNum = parseInt(date);
+
+    // Include full days between the start and end
+    if (dateNum > startDateNum && dateNum < endDateNum) return true;
+
+    // Include runs on the same start day if hour >= startHour
+    if (dateNum === startDateNum && hour >= startHour) return true;
+
+    // Include runs on the same end day if hour <= endHour
+    if (dateNum === endDateNum && hour <= endHour) return true;
+
+    return false;
+  });
+
+  // Setup canvas and GIF
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  const frameDelay = 1000 / fps;
+
+  const imageType = document.getElementById("imageType").value.toLowerCase();
+  let gifWidth = 600;
+  let gifHeight = (imageType === "surge") ? 250 : 400;
+
+  const gif = new GIF({
+    workers: 2,
+    quality: 10,
+    width: gifWidth,
+    height: gifHeight,
+    workerScript: "gif.worker.js"
+  });
+
+
+  for (const run of selectedRuns) {
+  const runPrefix = `${forecastPrefix}${run}/`;
+  const imageType = document.getElementById("imageType").value.toLowerCase();
+
+  // Fetch list of files for this run
+  const files = await (async () => {
+    let marker = "";
+    let allFiles = [];
+    do {
+      const url = `${accountUrl}/${container}?restype=container&comp=list&prefix=${encodeURIComponent(runPrefix)}&marker=${marker}&${sasToken}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`List failed: ${res.status} ${res.statusText}`);
+
+      const text = await res.text();
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(text, "application/xml");
+      const blobs = [...xml.querySelectorAll("Blob")].map(b => b.querySelector("Name").textContent);
+      allFiles.push(...blobs);
+
+      const nextMarker = xml.querySelector("NextMarker");
+      marker = nextMarker && nextMarker.textContent ? nextMarker.textContent : "";
+    } while (marker);
+    return allFiles;
+  })();
+
+  // Find matching image file based on dropdown
+  const selectedFile = files.find(f => f.toLowerCase().includes(`${imageType}.png`));
+  if (!selectedFile) {
+    console.warn(`⚠️ No ${imageType} image found in ${runPrefix}`);
+    continue;
+  }
+
+  const imageUrl = `${accountUrl}/${container}/${selectedFile}?${sasToken}`;
+
+  try {
+    const img = await loadImage(imageUrl);
+    canvas.width = img.width;
+    canvas.height = img.height;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+
+    // Annotate frame with run label
+    ctx.font = "10px Arial";
+    ctx.fillStyle = "black";
+    const label = run;
+    const textWidth = ctx.measureText(label).width;
+    ctx.fillText(label, canvas.width - textWidth - 10, canvas.height - 10);
+
+    gif.addFrame(ctx, { copy: true, delay: frameDelay });
+  } catch (err) {
+    console.warn(`❌ Failed to load ${imageType} image in ${runPrefix}`, err);
+  }
+}
+
+  // Add a final pause frame (duplicate of the last one) for half a second
+  if (selectedRuns.length > 0) {
+    gif.addFrame(ctx, { copy: true, delay: 1250 });
+  }
+
+gif.on("finished", blob => {
+  const url = URL.createObjectURL(blob);
+  const type = document.getElementById("imageType").value.toLowerCase();
+
+  preview.style.width = "600px";
+  preview.style.height = (type === "surge") ? "250px" : "400px";
+  preview.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:contain;">`;
+});
+
+  gif.render();
+});
+
+</script>
+
+</body>
+</html>

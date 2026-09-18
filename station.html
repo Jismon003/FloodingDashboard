@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+    <title>Monmouth/Ocean County Hydrograph Dashboard (Beta)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #c8c8c8;
+            --text: black;
+            --link: #0066cc;
+            --link-hover: #004c99;
+            --caption: black;
+            --bar-bg: rgba(200, 200, 200, 0.9);
+            --btn-bg: #f2f2f2;
+            --btn-hover: #e0e0e0;
+            --btn-text: #222;
+            --btn-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2), -2px -2px 6px rgba(255, 255, 255, 0.6);
+            --btn-shadow-hover: inset 2px 2px 6px rgba(0, 0, 0, 0.25), inset -2px -2px 6px rgba(255, 255, 255, 0.7);
+            --title-border-color: rgba(0, 0, 0, 0.2);
+            --menu-bg: rgba(242, 242, 242, 0.95);
+            --menu-text: black;
+        }
+
+        body.dark {
+            --bg: black;
+            --text: white;
+            --link: #66f;
+            --link-hover: #99f;
+            --caption: #ccc;
+            --bar-bg: rgba(0, 0, 0, 0.85);
+            --btn-bg: #333;
+            --btn-hover: #444;
+            --btn-text: #fff;
+            --btn-shadow: 2px 2px 6px rgba(0, 0, 0, 0.5), -2px -2px 6px rgba(255, 255, 255, 0.05);
+            --btn-shadow-hover: inset 2px 2px 6px rgba(0, 0, 0, 0.6), inset -2px -2px 6px rgba(255, 255, 255, 0.1);
+            --title-border-color: rgba(255, 255, 255, 0.3);
+            --menu-bg: rgba(51, 51, 51, 0.95);
+            --menu-text: white;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100%;
+        }
+
+        a {
+            color: var(--link);
+            text-decoration: none;
+        }
+
+        a:hover {
+            color: var(--link-hover);
+            text-decoration: underline;
+        }
+
+        #dateSelector {
+            position: sticky;
+            width: 100%;
+            top: 0;
+            left: 0;
+            right: 0;
+            margin: 0 auto;
+            background: var(--bar-bg);
+            z-index: 1500;
+            text-align: center;
+        }
+
+        #forecastDate {
+            font-size: 14px;
+            min-width: 100px;
+        }
+
+        #viewer {
+            display: none;
+            width: 100%;
+            max-width: 100%;
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        #caption {
+            margin: 5px 0;
+            font-size: 16px;
+            text-align: center;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #controls {
+            width: 100%;
+            gap: 10px;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            background: var(--bar-bg);
+            padding-top: 15px;
+            padding-bottom: 15px;
+            z-index: 1000;
+            position: sticky;
+            bottom: 0;
+        }
+
+        #controls button {
+            font-size: 16px;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            background: var(--btn-bg);
+            color: var(--btn-text);
+            cursor: pointer;
+            height: 45px;
+            box-shadow: var(--btn-shadow);
+            transition: all 0.2s ease;
+        }
+
+        #controls button:hover {
+            background: var(--btn-hover);
+            box-shadow: var(--btn-shadow-hover);
+        }
+
+        @media (max-width: 500px) {
+            #controls button {
+                font-size: 12px;
+                padding: 8px 8px;
+                height: 45px;
+            }
+        }
+
+        #list {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: center;
+            flex: 0 0 auto;
+            padding: 20px 0;
+        }
+
+        #list a {
+            color: #66f;
+            text-decoration: none;
+            font-size: 18px;
+        }
+
+        #list a:hover {
+            text-decoration: underline;
+            color: rgb(137, 137, 253);
+        }
+
+        .grid-wrapper,
+        #grid {
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        #grid {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            width: 100%;
+        }
+
+        .flex-column {
+            flex: 1 1 0;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .flex-column img {
+            width: 100%;
+            height: auto;
+            max-width: 100%;
+            border: none;
+        }
+
+        body:not(.dark) .flex-column img {
+            border: 1px solid black;
+        }
+
+        @media (max-width: 500px) {
+            #grid {
+                flex-direction: column;
+            }
+        }
+
+        body.force-stack #grid {
+            flex-direction: column !important;
+        }
+
+        body.force-grid #grid {
+            flex-direction: row !important;
+        }
+
+
+        .flex-column {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1 1 0;
+        }
+
+        .flex-column img {
+            width: 100%;
+            height: 100%;
+        }
+
+        .flex-column img.nws {
+            height: 100%;
+            width: 100%;
+        }
+
+        #externalLinks {
+            margin: 5px 0;
+            text-align: center;
+        }
+
+        #externalLinks a {
+            color: #3399ff;
+            text-decoration: none;
+            font-size: 16px;
+            display: inline-block;
+            margin: 6px 0;
+        }
+
+        #externalLinks a:hover {
+            text-decoration: underline;
+            color: #66ccff;
+        }
+
+        #hydrographs {
+            margin: 5px 0;
+            text-align: center;
+        }
+
+        #hydrographs a {
+            color: #ff9933;
+            /* orange */
+            text-decoration: none;
+            font-size: 16px;
+            display: inline-block;
+            margin: 6px 0;
+        }
+
+        #hydrographs a:hover {
+            text-decoration: underline;
+            color: #ffcc66;
+            /* lighter orange on hover */
+        }
+
+        #menuToggle {
+            display: none;
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 3000;
+            cursor: pointer;
+            background: var(--menu-bg);
+            border-radius: 3px;
+            color: var(--menu-text);
+            padding: 6px;
+            width: 22px;
+            height: 22px;
+        }
+
+        #menuToggle div {
+            width: 20px;
+            height: 3px;
+            background: var(--menu-text);
+            margin: 3px 0;
+            transition: 0.4s;
+        }
+
+        #menuBox {
+            display: none;
+            position: fixed;
+            top: 50px;
+            right: 10px;
+            background: var(--menu-bg);
+            color: var(--menu-text);
+            padding: 12px;
+            border-radius: 5px;
+            z-index: 2000;
+            font-size: 14px;
+            display: none;
+        }
+
+
+        #menuBox label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 6px 0;
+            cursor: pointer;
+        }
+
+        #themeButton {
+            position: fixed;
+            top: 10px;
+            right: 46px;
+            z-index: 2000;
+            cursor: pointer;
+            background: var(--menu-bg);
+            color: var(--menu-text);
+            border-radius: 3px;
+            padding: 7px 6px 5px 6px;
+            width: 22px;
+            height: 22px;
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        #themeButton:hover {
+            background: var(--btn-hvr);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 20px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: #66f;
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(20px);
+        }
+
+        .row {
+            position: relative;
+            display: inline-block;
+            margin: 6px;
+        }
+
+        .row button {
+            position: absolute;
+            left: 400px;
+            top: 0;
+        }
+
+        #imgModel {
+            cursor: pointer;
+        }
+
+        #imgPetss {
+            cursor: pointer;
+        }
+
+        #titleLabel {
+            width: 100%;
+            text-align: center;
+            padding: 20px 0;
+            background: var(--bar-bg);
+            color: var(--caption);
+            font-size: 20px;
+            font-weight: bold;
+            border-top: 1px solid var(--title-border-color);
+            border-bottom: 1px solid var(--title-border-color);
+            position: sticky;
+            top: 0;
+        }
+
+        .stationTitle {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin: 5px 0 10px 0;
+            color: var(--text);
+            width: 100%;
+            position: sticky;
+            top: 0;
+            z-index: 1200;
+        }
+
+        #siteFooter {
+            width: 100%;
+            text-align: center;
+            padding: 15px 0;
+            background: var(--bar-bg);
+            color: var(--caption);
+            font-size: 14px;
+            border-top: 1px solid var(--title-border-color);
+            margin-top: auto;
+        }
+    </style>
+</head>
+
+<body class="dark">
+    <div id="themeButton" onclick="toggleTheme()">
+        <i class="fa-solid"></i>
+    </div>
+    <div id="menuToggle" onclick="toggleMenu()">
+        <div></div>
+        <div></div>
+        <div></div>
+    </div>
+    <div id="menuBox">
+        <label>
+            <span>Stack/Grid</span>
+            <div class="switch">
+                <input type="checkbox" id="stackSwitch" onchange="toggleStackSwitch(this)">
+                <span class="slider"></span>
+            </div>
+        </label>
+        <label>
+            <span>Stevens Mode:</span>
+            <select id="stevensSelect" onchange="toggleStevensSelect(this)">
+                <option value="day">Single Day</option>
+                <option value="5day">5-Day</option>
+            </select>
+        </label>
+        <label>
+            <span>Weather Model:</span>
+            <select id="modelSelect" onchange="toggleModelSelect(this)">
+                <option value="ec-aifs_mslp_wind_neus">EC-AIFS Wind</option>
+                <option value="ecmwf_mslp_wind_neus">ECMWF Wind</option>
+                <option value="ecmwf_wavehgt_neus">ECMWF Swell</option>
+                <option value="gfs_mslp_wind_neus">GFS Wind</option>
+                <option value="gfs_wavehgt_neus">GFS Swell</option>
+            </select>
+        </label>
+        <label>
+            <span>P-ETSS Models:</span>
+            <select id="petssSelect" onchange="togglePetssSelect(this)">
+                <option value="PETSS">P-ETSS</option>
+                <option value="PETSS_GEFS">P-ETSS GEFS</option>
+                <option value="ETSURGE">ETSurge 2.0</option>
+            </select>
+        </label>
+    </div>
+
+    <div id="dateSelector" style="display:none; margin:10px; text-align: center;">
+        <div class="stationTitle" id="stationTitle"></div>
+        <div style="margin:6px; position: relative;">
+            Forecast Date:
+            <select id="forecastDate" onchange="loadForecastDate()"></select>
+            <button type="button" id="btnMostRecentRun" onclick="pickToday()">Today</button>
+        </div>
+        <div style="margin:6px;">
+            Model Run Hour:
+            <select id="forecastHour" onchange="updateIndexFromDropdowns()"></select>
+            <!-- <button type="button" onclick="pickLatestHour()">Latest Hour</button> -->
+            <button type="button" id="btnToggleLock" onclick="toggleLockHour()">Unlocked</button>
+        </div>
+        <div style="margin:6px;">
+            Model Run Date:
+            <select id="runDate" onchange="updateIndexFromDropdowns()"></select>
+            <button type="button" onclick="pickLatestRunDate()">Latest</button>
+        </div>
+        <div id="caption" style="margin-top: 8px; font-size: 16px; text-align: center;"></div>
+    </div>
+    <div id="viewer">
+        <div class="grid-wrapper">
+            <div id="gaugeInfo" style="text-align:center;font-size:16px;margin-bottom:10px;">Gauge Level: -- ft MLLW
+                (--)
+            </div>
+            <div class="grid-container" id="grid"></div>
+        </div>
+    </div>
+    <div id="controls">
+        <button type='button' onclick="nextImage()">Prev. Run<br>⬅</button>
+        <button type='button' onclick="prevImage()">Next Run<br>➡</button>
+        <br>
+        <button type='button' onclick="nextDay()">Prev. Day<br>⬅</button>
+        <button type='button' onclick="prevDay()">Next Day<br>➡</button>
+    </div>
+    <label id="titleLabel">
+        Monmouth/Ocean County<br>Hydrograph Dashboard (Beta)
+    </label>
+    <label style="font-size: 16px; font-weight: bold; padding: 20px 0 5px 0">Hydrographs</label>
+    <div id="hydrographs" style="text-align:center;"></div>
+    <label style="font-size: 16px; font-weight: bold; padding: 20px 0 5px 0">External Links</label>
+    <div id="externalLinks">
+        <a href="https://hudson.dl.stevens-tech.edu/sfas/" target="_blank">Stevens SFAS</a><br>
+        <a href="https://water.noaa.gov/#@=-74.2797907,40.2865122,9.7479553..." target="_blank">NOAA Water
+            Portal</a><br>
+        <a href="https://slosh.nws.noaa.gov/petss/index.php?glat=mat&display=0&type=e10&base=USGSTopo&datm=datum&sorc=mean"
+            target="_blank">P-ETSS</a><br>
+        <a href="https://slosh.nws.noaa.gov/petss_gefs/index.php?glat=mat&display=0&type=e10&base=USGSTopo&datm=datum&sorc=mean"
+            target="_blank">P-ETSS GEFS</a><br>
+        <a href="https://slosh.nws.noaa.gov/etsurge2.0/index.php?glat=mat&display=0&type=stormtide&base=USGSTopo"
+            target="_blank">ETSurge 2.0</a><br>
+        <a href="https://slosh.nws.noaa.gov/psurge/index.php?R=CONUS" target="_blank">P-Surge</a><br>
+        <a href="https://polar.ncep.noaa.gov/estofs/global/index.htm#New_Jersey" target="_blank">ESTOFS Global [New
+            Jersey]</a><br>
+        <a href="https://coastwatch.noaa.gov/cw_html/cwViewer.html" target="_blank">NOAA CoastWatch</a><br>
+        <a href="https://nowcoast.noaa.gov/" target="_blank">NOAA nowCOAST</a><br>
+        <a href="https://tidesandcurrents.noaa.gov/inundationdb/" target="_blank">NOAA Coastal Inundation
+            Dashboard</a><br>
+        <a href="https://polar.ncep.noaa.gov/nwps/viewer.shtml" target="_blank">NWPS Viewer</a><br>
+        <a href="https://dashboard.waterdata.usgs.gov/app/nwd/en/" target="_blank">USGS National Water Dashboard</a><br>
+        <a href="https://www.tropicaltidbits.com/analysis/models/?model=ec-aifs&region=eus&pkg=mslp_wind"
+            target="_blank">Tropical Tidbits</a><br>
+    </div>
+    <br>
+    <br>
+    <a href="https://hydrographarchive.z20.web.core.windows.net/gif_generator.html" target="_blank"
+        style="font-weight:bold">GIF Generator</a>
+    <br>
+    <footer id="siteFooter">
+        Copyright &copy; 2025 Simon, Jacob — Hosted by Sea Bright Fire/Rescue
+        <br>
+        Contact: JakeSimon003@gmail.com
+    </footer>
+
+    <script>
+        window.history.scrollRestoration = 'manual';
+        const accountUrl = "https://hydrographarchive.blob.core.windows.net";
+        const container = "$web";
+        const sasToken = "sp=rl&st=2025-09-09T17:44:42Z&se=2035-02-02T02:59:42Z&spr=https&sv=2024-11-04&sr=c&sig=UOgYKdx4m17fcGGgfzQB002pKOpbw%2FI67SBuuJxkIoI%3D";
+        async function listBlobs(path) {
+            const url = `${accountUrl}/${container}?restype=container&comp=list&prefix=${encodeURIComponent(path)}&delimiter=/&${sasToken}`;
+            const res = await fetch(url);
+            const text = await res.text();
+            const parser = new DOMParser();
+            const xml = parser.parseFromString(text, "application/xml");
+
+            const files = [...xml.getElementsByTagName("Name")].map(n => n.textContent).filter(n => !n.endsWith("/"));
+            const dirs = [...xml.getElementsByTagName("Name")].map(n => n.textContent).filter(n => n.endsWith("/"));
+
+            return { files, dirs };
+        }
+
+        let images = [];
+        let index = 0;
+        let runtimes = [];
+        let modelMode = "ec-aifs_mslp_wind_neus";
+        let petssMode = "PETSS";
+        let stevensMode = "day";
+        let lockHour = false;
+
+        const listDiv = document.getElementById("list");
+        const viewerDiv = document.getElementById("viewer");
+        const controlsDiv = document.getElementById("controls");
+        const caption = document.getElementById("caption");
+        const gridDiv = document.getElementById("grid");
+
+        // --- UTILITIES ---
+        function buildBlobUrl(path) {
+            return `${accountUrl}/${container}/${path}?${sasToken}`;
+        }
+
+        function mapStevensToModel(runHour) {
+            const h = parseInt(runHour, 10);
+            if (h >= 21) return "18";
+            if (h >= 15) return "12";
+            if (h >= 9) return "06";
+            if (h >= 3) return "00";
+            return "00";
+        }
+
+        // models
+        function getModelSuffix(modelDate, forecastDate, mode) {
+            const base = new Date(modelDate.slice(0, 4), modelDate.slice(4, 6) - 1, modelDate.slice(6, 8));
+            const target = new Date(forecastDate.slice(0, 4), forecastDate.slice(4, 6) - 1, forecastDate.slice(6, 8));
+            const diffDays = Math.round((target - base) / (1000 * 60 * 60 * 24));
+
+            if (mode === "ecmwf_mslp_wind_neus") {
+                const hours = [0, 24, 48, 72, 96, 120];
+                return hours[Math.min(diffDays, hours.length - 1)];
+            } else if (mode.includes("ecmwf")) {
+                return 1 + diffDays * 8;
+            } else {
+                return 1 + diffDays * 4;
+            }
+        }
+        // ====================
+        //  LOAD STATION FROM URL
+        // ====================
+        const params = new URLSearchParams(window.location.search);
+        const stationParam = params.get("station");
+        if (!stationParam) {
+            document.body.innerHTML = "<h2 style='text-align:center;color:red'>Missing ?station= parameter in URL</h2>";
+            throw new Error("No station specified");
+        }
+        const station = decodeURIComponent(stationParam);
+        document.getElementById("stationTitle").textContent = station.replace(/_/g, " ");
+        let cwd = `${station}/`;
+
+        // Initialize UI directly
+        (async function initStation() {
+            console.log("Loading station:", station);
+            const dateSel = document.getElementById("forecastDate");
+            const datePath = `${cwd}Stevens/`;
+            const { dirs } = await listBlobs(datePath);
+            const forecastDates = dirs
+                .map(d => d.replace(datePath, "").replace(/\/$/, ""))
+                .filter(d => /^\d{8}$/.test(d))
+                .sort((a, b) => b.localeCompare(a));
+            if (forecastDates.length === 0) return;
+            forecastDates.forEach(d => {
+                const opt = document.createElement("option");
+                opt.value = d;
+                opt.textContent = d;
+                dateSel.appendChild(opt);
+            });
+            document.getElementById("dateSelector").style.display = "block";
+            document.getElementById("viewer").style.display = "flex";
+            document.getElementById("controls").style.display = "flex";
+            document.getElementById("menuToggle").style.display = "block";
+            const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" }).replace(/-/g, "");
+            if (forecastDates.includes(todayStr)) {
+                dateSel.value = todayStr;
+            } else {
+                dateSel.value = forecastDates[0];
+            }
+            await loadForecastDate();
+            await pickLatestRunDate();
+            await pickLatestHour();
+
+        })();
+
+        function scrollToTop(duration = 500) {
+            const start = window.scrollY;
+            const startTime = performance.now();
+
+            function easeInOutQuint(t) {
+                return t < 0.5
+                    ? 16 * t * t * t * t * t
+                    : 1 - Math.pow(-2 * t + 2, 5) / 2;
+            }
+
+
+            function animate(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = easeInOutQuint(progress);
+                window.scrollTo(0, start * (1 - eased));
+
+                if (elapsed < duration) {
+                    requestAnimationFrame(animate);
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        function adjustForECMWF(runDate, runHour) {
+            // Parse YYYYMMDD + hour
+            let year = parseInt(runDate.slice(0, 4));
+            let month = parseInt(runDate.slice(4, 6)) - 1;
+            let day = parseInt(runDate.slice(6, 8));
+            let hour = parseInt(runHour, 10);
+
+            let d = new Date(Date.UTC(year, month, day, hour));
+            d.setHours(d.getHours() - 6);  // back up one cycle
+
+            const newDate = d.toISOString().slice(0, 10).replace(/-/g, "");
+            const newHour = String(d.getUTCHours()).padStart(2, "0");
+            return { runDate: newDate, runHour: newHour };
+        }
+
+        function updateIndexFromDropdowns() {
+            const runDateSel = document.getElementById("runDate").value;
+            const hourSel = document.getElementById("forecastHour").value;
+            const forecastDate = document.getElementById("forecastDate").value;
+
+            const key = `${hourSel}_${runDateSel}`;
+            let newIndex = images.findIndex(img => img.run === key);
+
+            // 🔄 If the selected hour doesn't exist for this run date, fall back to latest available runtime
+            if (newIndex === -1) {
+                const preferredOrder = ["21", "15", "09", "03", "00"];
+                for (const h of preferredOrder) {
+                    const altKey = `${h}_${runDateSel}`;
+                    newIndex = images.findIndex(img => img.run === altKey);
+                    if (newIndex !== -1) break;
+                }
+            }
+
+            if (newIndex === -1) return; // still nothing found
+
+            index = newIndex;
+            refreshDropdowns(images[index].run, runtimes);
+            showGroupedImage(index, forecastDate);
+        }
+
+
+        // --- LOADING FORECAST DATA ---
+        async function loadForecastDate() {
+            const forecastDate = document.getElementById("forecastDate").value;
+            const stationPath = cwd;
+            const stevensPath = `${stationPath}Stevens/${forecastDate}/`;
+            const nwsPath = `${stationPath}NWS/`;
+
+            const { dirs } = await listBlobs(stevensPath);
+            runtimes = dirs
+                .map(d => d.replace(stevensPath, "").replace(/\/$/, ""))
+                .filter(d => /^\d{2}_\d{8}$/.test(d))
+                .sort((a, b) => {
+                    const [hA, dA] = a.split("_");
+                    const [hB, dB] = b.split("_");
+                    return (dB + hB).localeCompare(dA + hA);
+                });
+
+            if (runtimes.length === 0) return;
+
+            images = await Promise.all(runtimes.map(async (run) => {
+                let [runHour, runDate] = run.split("_");
+                let targetHour = mapStevensToModel(runHour);
+                const suffix = getModelSuffix(runDate, forecastDate, modelMode);
+                const modelPath = `Models/${runDate}${targetHour}/${modelMode.split("_")[0]}/`;
+                const stevensCompositePath = `${stationPath}Stevens/Composite/`;
+
+                const [stevensDay, stevensComposite, nws, petss, modelFiles] = await Promise.all([
+                    listBlobs(`${stevensPath}${run}/`).catch(() => ({ files: [] })),           // daily
+                    listBlobs(`${stevensCompositePath}${run}/`).catch(() => ({ files: [] })),  // 5-day
+                    listBlobs(`${nwsPath}${run}/`).catch(() => ({ files: [] })),
+                    listBlobs(`${stationPath}PETSS/${run}/`).catch(() => ({ files: [] })),
+                    listBlobs(modelPath).catch(() => ({ files: [] }))
+                ]);
+
+                let expected;
+                if (modelMode === "ecmwf_mslp_wind_neus") {
+                    expected = `${runDate}${targetHour}_ecmwf_sfcwind_mslp_us_ne_${suffix}.png`;
+                } else {
+                    expected = `${runDate}${targetHour}_${modelMode}_${suffix}.png`;
+                }
+
+                const match = modelFiles.files.find(f => f.endsWith(expected));
+
+                const tideDay = stevensDay.files.find(f => f.includes("Tide") && !f.includes("5_day"));
+                const surgeDay = stevensDay.files.find(f => f.includes("Surge") && !f.includes("5_day"));
+                const tide5 = stevensComposite.files.find(f => f.includes("Tide") && f.includes("5_day"));
+                const surge5 = stevensComposite.files.find(f => f.includes("Surge") && f.includes("5_day"));
+
+                const tideChoice = stevensMode === "5day" ? tide5 : tideDay;
+                const surgeChoice = stevensMode === "5day" ? surge5 : surgeDay;
+
+                return {
+                    run,
+                    tide: tideChoice ? buildBlobUrl(tideChoice) : null,
+                    surge: surgeChoice ? buildBlobUrl(surgeChoice) : null,
+                    petss: petss.files.find(f => f.endsWith(`${petssMode}.png`)) ? buildBlobUrl(petss.files.find(f => f.endsWith(`${petssMode}.png`))) : null,
+                    nws: nws.files.find(f => f.includes("NWS")) ? buildBlobUrl(nws.files.find(f => f.includes("NWS"))) : null,
+                    model: match ? buildBlobUrl(match) : null,
+                    modelExpected: expected
+                };
+            }));
+
+            if (images.length > 0) {
+                if (index >= images.length) index = images.length - 1;
+                if (index < 0) index = 0;
+                refreshDropdowns(images[index].run, runtimes);
+                showGroupedImage(index, forecastDate);
+            }
+        }
+
+        function refreshDropdowns(currentRun, runtimes) {
+            const [curHour, curDate] = currentRun.split("_");
+
+            // repopulate runDate
+            const runDateSel = document.getElementById("runDate");
+            runDateSel.innerHTML = "";
+            const uniqueDates = [...new Set(runtimes.map(r => r.split("_")[1]))];
+            uniqueDates.forEach(d => {
+                const opt = document.createElement("option");
+                opt.value = d;
+                opt.textContent = d;
+                runDateSel.appendChild(opt);
+            });
+            runDateSel.value = curDate;
+
+            // repopulate hour
+            const hourSel = document.getElementById("forecastHour");
+            hourSel.innerHTML = "";
+            const hoursForDate = runtimes.filter(r => r.endsWith(curDate)).map(r => r.split("_")[0]);
+            hoursForDate.forEach(h => {
+                const opt = document.createElement("option");
+                opt.value = h;
+                opt.textContent = h;
+                hourSel.appendChild(opt);
+            });
+            hourSel.value = curHour;
+        }
+
+        function preloadAndSwapImage(imgElement, newUrl, fallbackText) {
+            if (!newUrl) {
+                imgElement.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(
+                    `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="302">
+         <rect width="100%" height="100%" fill="#000000" stroke="red" stroke-dasharray="5,5"/>
+         <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="red" font-size="16">
+           ${fallbackText || "Unavailable"}
+         </text>
+       </svg>`
+                );
+                return;
+            }
+
+            const preloaded = new Image();
+            preloaded.onload = () => { imgElement.src = newUrl; };
+            preloaded.onerror = () => {
+                preloadAndSwapImage(imgElement, null, fallbackText);
+            };
+            preloaded.src = newUrl;
+        }
+
+        function showGroupedImage(i, forecastDate) {
+            const group = images[i];
+            const [runTime, runDate] = group.run.split("_");
+
+            // sync dropdowns
+            document.getElementById("forecastHour").value = runTime;
+            document.getElementById("runDate").value = runDate;
+
+            // Build static <img> tags only once
+            if (!gridDiv.hasChildNodes()) {
+                gridDiv.innerHTML = `
+    <div class="flex-column">
+      <img id="imgTide" alt="Tide">
+      <img id="imgSurge" alt="Surge">
+      <img id="imgPetss" alt="PETSS">
+    </div>
+    <div class="flex-column">
+      <img id="imgNws" class="nws" alt="NWS">
+      <img id="imgModel" class="nws" alt="Model">
+    </div>
+  `;
+            }
+
+
+            // Grab existing <img> references
+            const tideEl = document.getElementById("imgTide");
+            const surgeEl = document.getElementById("imgSurge");
+            const petssEl = document.getElementById("imgPetss");
+            const nwsEl = document.getElementById("imgNws");
+            const modelEl = document.getElementById("imgModel");
+
+            /*
+            // Attach triple-click fullscreen behavior
+            [tideEl, surgeEl, petssEl, nwsEl, modelEl].forEach(el => {
+                let clickCount = 0;
+                el.addEventListener("click", () => {
+                    clickCount++;
+                    setTimeout(() => { clickCount = 0 }, 400);
+                    if (clickCount === 3) {
+                        openFullscreen(el);
+                        clickCount = 0;
+                    }
+                });
+            });
+            */
+
+            preloadAndSwapImage(tideEl, group.tide);
+            preloadAndSwapImage(surgeEl, group.surge);
+            preloadAndSwapImage(petssEl, group.petss);
+            preloadAndSwapImage(modelEl, group.model, `${group.modelExpected} unavailable`);
+            const station = cwd.split("/").filter(Boolean).pop().replace(/ /g, "_");
+            const nwsMap = {
+                "Sea_Bright": "sbin4",
+                "Sandy_Hook": "sdhn4",
+                "Keansburg": "ksbn4",
+                "Manasquan": "msnn4",
+                "Mantoloking": "mtln4",
+                "Barnaget_Light": "bgln4",
+                "Ship_Bottom": "sbtn4",
+                "Tuckerton": "tktn4"
+            };
+            const nwsCode = nwsMap[station] || "";
+            const nwsUrl = nwsCode ? `https://water.noaa.gov/resources/hydrographs/${nwsCode}_hg.png` : null;
+            preloadAndSwapImage(nwsEl, nwsUrl);
+
+            document.getElementById("modelSelect").value = modelMode;
+
+            /*
+            modelEl.ondblclick = () => {
+                const pairs = {
+                    "ec-aifs_mslp_wind_neus": "ecmwf_mslp_wind_neus",
+                    "ecmwf_mslp_wind_neus": "ecmwf_wavehgt_neus",
+                    "ecmwf_wavehgt_neus": "gfs_mslp_wind_neus",
+                    "gfs_mslp_wind_neus": "gfs_wavehgt_neus",
+                    "gfs_wavehgt_neus": "ec-aifs_mslp_wind_neus"
+                };
+                modelMode = pairs[modelMode] || modelMode;
+                document.getElementById("modelSelect").value = modelMode;
+                loadForecastDate();
+            };
+
+
+            petssEl.ondblclick = () => {
+                const modes = ["PETSS", "PETSS_GEFS", "ETSURGE"];
+                let idx = modes.indexOf(petssMode);
+                petssMode = modes[(idx + 1) % modes.length];
+                document.getElementById("petssSelect").value = petssMode;
+                loadForecastDate();
+            };
+            tideEl.ondblclick = surgeEl.ondblclick = () => {
+                const modes = ["day", "5day"];
+                let idx = modes.indexOf(stevensMode);
+                stevensMode = modes[(idx + 1) % modes.length];
+                document.getElementById("stevensSelect").value = stevensMode;
+                loadForecastDate();
+            };
+            */
+
+            getGaugeLevelByStation(station).then(data => {
+                const info = document.getElementById("gaugeInfo");
+                if (data) {
+                    info.innerHTML = `
+  <div style="display:inline-block;line-height:1.3;text-align:left;">
+    <table style="border-collapse:collapse;text-align:left;">
+      <tr>
+        <td style="padding-right:8px;">Current Gauge Level:</td>
+        <td><strong>${data.mllw}</strong> ft (MLLW)</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td style="font-size:12px;color: var(--btn-text);">${data.date} @ ${data.time}</td>
+      </tr>
+    </table>
+  </div>`;
+                } else {
+                    info.innerHTML = `<span style="color:red;">Gauge level unavailable</span>`;
+                }
+            });
+
+        }
+
+        function formatRunMeta(runTime, runDate) {
+            // Parse YYYYMMDD
+            const year = parseInt(runDate.slice(0, 4));
+            const month = parseInt(runDate.slice(4, 6)) - 1;
+            const day = parseInt(runDate.slice(6, 8));
+
+            // Build date object
+            const date = new Date(Date.UTC(year, month, day));
+            const nyDate = new Date(date.toLocaleString("en-US", { timeZone: "America/New_York" }));
+
+            // DST check (EDT = q, EST = r)
+            const jan = new Date(year, 0, 1).getTimezoneOffset();
+            const jul = new Date(year, 6, 1).getTimezoneOffset();
+            const isDST = nyDate.getTimezoneOffset() < Math.max(jan, jul);
+            const designator = isDST ? "q" : "r";
+
+            // Normalize date → YYYY-MM-DD
+            const normalizedDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+            // Return with span for styling
+            return `${runTime}${designator} ${runDate}`;
+        }
+
+
+
+        // --- BUTTONS ---
+        function nextImage() {
+            if (!lockHour) {
+                if (index < images.length - 1) {
+                    index++;
+                    refreshDropdowns(images[index].run, runtimes);
+                    showGroupedImage(index, document.getElementById("forecastDate").value);
+                }
+            } else {
+                const [curHour, curDate] = images[index].run.split("_");
+                const curIdx = runtimes.findIndex(r => r === images[index].run);
+                for (let i = curIdx + 1; i < runtimes.length; i++) {
+                    const [h, d] = runtimes[i].split("_");
+                    if (h === curHour) {
+                        index = images.findIndex(img => img.run === runtimes[i]);
+                        refreshDropdowns(images[index].run, runtimes);
+                        showGroupedImage(index, document.getElementById("forecastDate").value);
+                        return;
+                    }
+                }
+            }
+        }
+
+        function prevImage() {
+            if (!lockHour) {
+                if (index > 0) {
+                    index--;
+                    refreshDropdowns(images[index].run, runtimes);
+                    showGroupedImage(index, document.getElementById("forecastDate").value);
+                }
+            } else {
+                const [curHour, curDate] = images[index].run.split("_");
+                const curIdx = runtimes.findIndex(r => r === images[index].run);
+                for (let i = curIdx - 1; i >= 0; i--) {
+                    const [h, d] = runtimes[i].split("_");
+                    if (h === curHour) {
+                        index = images.findIndex(img => img.run === runtimes[i]);
+                        refreshDropdowns(images[index].run, runtimes);
+                        showGroupedImage(index, document.getElementById("forecastDate").value);
+                        return;
+                    }
+                }
+            }
+        }
+
+        function toggleLockHour() {
+            lockHour = !lockHour;
+            document.getElementById("btnToggleLock").textContent = lockHour ? "Locked" : "Unlocked";
+        }
+
+
+        async function prevDay() {
+            const sel = document.getElementById("forecastDate");
+            if (sel.selectedIndex > 0) {
+                sel.selectedIndex -= 1;
+                await loadForecastDate();
+                //await pickLatestRunDate();
+                //await pickLatestHour();
+            }
+        }
+
+        async function nextDay() {
+            const sel = document.getElementById("forecastDate");
+            if (sel.selectedIndex < sel.options.length - 1) {
+                sel.selectedIndex += 1;
+                await loadForecastDate();
+                // await pickLatestRunDate();
+                //await pickLatestHour();
+            }
+        }
+
+
+
+        async function setMostRecentRuntime() {
+            const runDateSel = document.getElementById("runDate");
+            const hourSel = document.getElementById("forecastHour");
+
+            runDateSel.selectedIndex = 0;
+            hourSel.selectedIndex = 0;
+        }
+
+        async function pickToday() {
+            const sel = document.getElementById("forecastDate");
+            if (!sel) return;
+
+            const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" }).replace(/-/g, "");
+            const opt = [...sel.options].find(o => o.value === todayStr);
+
+            if (opt) {
+                sel.value = todayStr;
+            } else {
+                sel.selectedIndex = 0; // fallback to most recent available
+            }
+
+            await loadForecastDate();
+            await pickLatestRunDate();
+            await pickLatestHour();
+        }
+
+
+        async function pickLatestHour() {
+            const sel = document.getElementById("forecastHour");
+            sel.selectedIndex = 0;
+            await loadForecastDate();
+        }
+
+        async function pickLatestRunDate() {
+            const selDate = document.getElementById("runDate");
+            selDate.selectedIndex = 0;
+            await loadForecastDate();
+        }
+
+        function parentPath(path) {
+            let parts = path.split("/").filter(Boolean);
+            parts.pop();
+            return parts.length ? parts.join("/") + "/" : "";
+        }
+
+
+        // Helper to request fullscreen on an element
+        function openFullscreen(el) {
+            if (el.requestFullscreen) {
+                el.requestFullscreen();
+            } else if (el.webkitRequestFullscreen) { // Safari
+                el.webkitRequestFullscreen();
+            } else if (el.msRequestFullscreen) { // IE/Edge
+                el.msRequestFullscreen();
+            }
+        }
+
+        function toggleModelSelect(el) {
+            modelMode = el.value;
+            loadForecastDate(); // reload with chosen mode
+        }
+
+
+        function toggleMenu() {
+            const menu = document.getElementById("menuBox");
+            if (menu.style.display === "block") {
+                menu.style.display = "none";
+            } else {
+                menu.style.display = "block";
+            }
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const btn = document.getElementById("themeButton");
+            const icon = btn.querySelector("i");
+
+            body.classList.toggle("dark");
+
+            if (body.classList.contains("dark")) {
+                icon.className = "fa-solid fa-moon";
+            } else {
+                icon.className = "fa-solid fa-sun";
+            }
+
+            localStorage.setItem("stationThemeDark", body.classList.contains("dark"));
+        }
+
+        function updateThemeButtonIcon() {
+            const body = document.body;
+            const btn = document.getElementById("themeButton");
+            const icon = btn.querySelector("i");
+
+            if (body.classList.contains("dark")) {
+                icon.className = "fa-solid fa-moon";
+            } else {
+                icon.className = "fa-solid fa-sun";
+            }
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            const dark = localStorage.getItem("stationThemeDark") === "true";
+            if (dark) document.body.classList.add("dark");
+            updateThemeButtonIcon();
+        });
+
+
+        function toggleStackSwitch(el) {
+            if (el.checked) {
+                document.body.classList.add("force-grid");
+                document.body.classList.remove("force-stack");
+            } else {
+                document.body.classList.add("force-stack");
+                document.body.classList.remove("force-grid");
+            }
+
+            // 🔄 Force reflow to reset sticky positioning
+            controlsDiv.style.position = "static";   // temporarily disable sticky
+            void controlsDiv.offsetHeight;           // trigger a reflow
+            controlsDiv.style.position = "sticky";   // restore sticky
+            controlsDiv.style.bottom = "0";          // make sure it's anchored
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const stackSwitch = document.getElementById("stackSwitch");
+
+            if (window.innerWidth > 768) {
+                // desktop defaults to grid
+                document.body.classList.add("force-grid");
+                stackSwitch.checked = true;
+            } else {
+                // mobile defaults to stack
+                document.body.classList.add("force-stack");
+                stackSwitch.checked = false;
+            }
+        });
+
+        function togglePetssSelect(el) {
+            petssMode = el.value;
+            loadForecastDate(); // reload with chosen mode
+        }
+        function toggleStevensSelect(el) {
+            stevensMode = el.value;
+            loadForecastDate();
+        }
+
+        /*
+        let touchStartX = null;
+
+        document.addEventListener("touchstart", function (e) {
+            if (e.touches.length === 1) {
+                touchStartX = e.touches[0].clientX;
+            }
+        }, false);
+
+        document.addEventListener("touchend", function (e) {
+            if (touchStartX === null) return;
+            let touchEndX = e.changedTouches[0].clientX;
+            let deltaX = touchEndX - touchStartX;
+            if (Math.abs(deltaX) > 50) {
+                if (deltaX > 0) {
+                    nextImage();
+                } else {
+                    prevImage();
+                }
+            }
+            touchStartX = null;
+        }, false);
+        */
+
+        const gaugeSites = {
+            "Sea_Bright": "01407600",
+            "Keansburg": "01407081",
+            "Manasquan": "01408048"
+        };
+        // NOAA tide gauge for Sandy Hook
+        async function getNOAAGaugeLevel_SandyHook() {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, "0");
+            const dd = String(today.getDate()).padStart(2, "0");
+            const dateStr = `${yyyy}${mm}${dd}`;
+
+            const url = `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?` +
+                `product=water_level&application=NOS.COOPS.TAC.WL&begin_date=${dateStr}` +
+                `&end_date=${dateStr}&datum=MLLW&station=8531680&time_zone=GMT` +
+                `&units=english&format=xml`;
+
+            try {
+                const res = await fetch(url);
+                const xmlText = await res.text();
+                const xml = new DOMParser().parseFromString(xmlText, "application/xml");
+                const obs = xml.querySelectorAll("observations > wl");
+                if (!obs.length) return null;
+
+                const last = obs[obs.length - 1];
+                const mllw = parseFloat(last.getAttribute("v")).toFixed(2);
+                const fullTime = last.getAttribute("t");
+                const utc = new Date(fullTime + "Z");
+                const timeOnly = utc.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+
+                return { mllw, date: dateStr, time: timeOnly };
+            } catch (err) {
+                console.warn("[NOAA] Sandy Hook gauge fetch failed:", err);
+                return null;
+            }
+        }
+
+        async function getGaugeLevelByStation(stationName) {
+            // Use NOAA API for Sandy Hook
+            if (stationName === "Sandy_Hook") {
+                return await getNOAAGaugeLevel_SandyHook();
+            }
+
+            const site = gaugeSites[stationName];
+            if (!site) {
+                console.warn("No site code found for station:", stationName);
+                return null;
+            }
+            const url = `https://waterservices.usgs.gov/nwis/iv/?sites=${site}&agencyCd=USGS&format=rdb`;
+            const res = await fetch(`${url}`, { cache: "no-store" });
+            const text = await res.text();
+            const lines = text.split("\n");
+            const dataLine = lines.find(l => l.startsWith("USGS"));
+            if (!dataLine) {
+                console.warn("No data line found starting with 'USGS'");
+                return null;
+            }
+
+            const parts = dataLine.trim().split(/\s+/);
+            // parts[5] is value, parts[6] is flag
+            const date = `${parts[2]}`;
+            const time = `${parts[3]}`;
+            const navd88 = parseFloat(parts[5]);
+            if (isNaN(navd88)) {
+                console.warn("NAVD88 value not a number");
+                return null;
+            }
+            const offset = 2.095;
+            const mllw = (navd88 + offset).toFixed(2);
+            return { mllw, date, time };
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            // define codes per station
+            const HYDRO_CODES = {
+                "Sea_Bright": { stevens: "U219", nws: "sbin4", petss: "8531804" },
+                "Sandy_Hook": { stevens: "N021", nws: "sdhn4", petss: "8531680" },
+                "Keansburg": { stevens: "U218", nws: "ksbn4", petss: "8531592" },
+                "Manasquan": { stevens: "U249", nws: "msnn4", petss: "8632591" }
+            };
+
+            // read ?station= parameter
+            const params = new URLSearchParams(window.location.search);
+            const stationParam = params.get("station");
+            if (!stationParam) return;
+
+            const station = stationParam.replace(/_/g, " ");
+            const key = stationParam.replace(/ /g, "_");
+            const codes = HYDRO_CODES[key];
+
+            const div = document.getElementById("hydrographs");
+
+            if (!codes) {
+                div.innerHTML = `<div style="color:red;">No hydrograph links for ${station}</div>`;
+                return;
+            }
+
+            // build URLs dynamically
+            const stevensUrl = `https://hudson.dl.stevens-tech.edu/sfas/d/index.shtml?station=${codes.stevens}`;
+            const nwsUrl = `https://water.noaa.gov/gauges/${codes.nws}`;
+            const petssUrl = `https://slosh.nws.noaa.gov/petss/index.php?stid=${codes.petss}&datum=MLLW&show=1-1-1-1-0`;
+            const etsurgeUrl = `https://slosh.nws.noaa.gov/etsurge2.0/index.php?stid=${codes.petss}&datum=MLLW&show=1-1-1-1-0`;
+            const petssGefUrl = `https://slosh.nws.noaa.gov/etsurge2.0/index.php?stid=${codes.petss}&datum=MLLW&show=1-1-1-1-0`;
+
+            // insert dynamic HTML
+            div.innerHTML = `
+    <div style="margin-top:10px; font-size:15px;">
+      <a href="${stevensUrl}" target="_blank">Stevens SFAS</a> |
+      <a href="${nwsUrl}" target="_blank">NOAA Water</a> |
+      <a href="${petssUrl}" target="_blank">P-ETSS</a> |
+      <a href="${petssGefUrl}" target="_blank">P-ETSS GEFS</a> |
+      <a href="${etsurgeUrl}" target="_blank">ETSurge 2.0</a>
+    </div>
+  `;
+        });
+
+    </script>
+</body>
+
+</html>

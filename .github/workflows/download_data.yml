@@ -25,7 +25,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          pip install pyppeteer opencv-python numpy pytz
 
       - name: Run downloader
         run: |

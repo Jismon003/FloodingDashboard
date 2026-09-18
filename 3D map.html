@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Google Photorealistic 3D Map</title>
+  <link href="https://cdn.jsdelivr.net/npm/cesium@1.106/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #cesiumContainer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="cesiumContainer"></div>
+  <script src="https://cdn.jsdelivr.net/npm/cesium@1.106/Build/Cesium/Cesium.js"></script>
+  <script>
+    (async function () {
+      Cesium.Ion.defaultAccessToken =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiYTIwZjIxMy04NDdiLTQ5ZWQtYmUwYS0yNzQxYmQ0MDZlYTMiLCJpZCI6MjEwNjcyLCJpYXQiOjE3MTM4NzQ3NTF9.LAzV-B4xKBkV4n3QZG9HnLarvmdGnm55ia0KVR_jufU";
+
+      const viewer = new Cesium.Viewer("cesiumContainer", {
+        globe: false,
+        skyAtmosphere: new Cesium.SkyAtmosphere(),
+        sceneModePicker: false,
+        baseLayerPicker: false,
+        timeline: false,
+        animation: false,
+      });
+
+      // Center the view over Monmouth County, NJ
+      viewer.camera.setView({
+        destination: Cesium.Cartesian3.fromDegrees(-74.12, 40.29, 100000),
+        orientation: {
+          heading: Cesium.Math.toRadians(0.0),
+          roll: 0.0,
+        },
+      });
+
+      // Override Home button
+      viewer.homeButton.viewModel.command.beforeExecute.addEventListener(function (e) {
+        e.cancel = true;
+        viewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(-74.12, 40.29, 100000),
+          orientation: {
+            heading: Cesium.Math.toRadians(0.0),
+            roll: 0.0,
+          },
+          duration: 2.5,
+        });
+      });
+
+      try {
+        const tileset = viewer.scene.primitives.add(
+          await Cesium.Cesium3DTileset.fromIonAssetId(2275207)
+        );
+      } catch (error) {
+        console.error("Error loading tileset:", error);
+      }
+    })();
+  </script>
+</body>
+</html>

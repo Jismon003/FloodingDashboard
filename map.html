@@ -1806,7 +1806,7 @@
           }
         ]
       },
-      center: [-74.26, 40.29],
+      center: [-74.56, 40.29],
       zoom: 10,
       attributionControl: false
     });
@@ -1819,7 +1819,7 @@
 
     if (window.innerWidth <= 768) {
       map.setZoom(9);
-      map.setCenter([-74.26, 40.29]);
+      map.setCenter([-74.56, 40.29]);
     }
 
     // --- Home button: fly to saved home view ---
@@ -1878,7 +1878,7 @@
     }
 
     document.getElementById("defaultMapViewBtn").addEventListener("click", () => {
-      const defaultCenter = [-74.26, 40.29];
+      const defaultCenter = [-74.56, 40.29];
       const defaultZoom = 10;
       const defaultBearing = 0;
       const defaultPitch = 0;
@@ -3196,7 +3196,7 @@
               style="text-decoration:underline; color:var(--popup-text); display:block; margin-bottom:3px;">
               Weather Station &raquo;
            </a>
-           <a href="https://hydrographarchive.z20.web.core.windows.net/station.html?station=${stationKey}"
+           <a href="https://jismon003.github.io/FloodingDashboard/station.html?station=${stationKey}"
               target="_blank"
               style="text-decoration:underline; color:var(--popup-text); display:block;">
               Hydrographs &raquo;

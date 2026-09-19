@@ -2056,10 +2056,10 @@
 
 
     async function loadMonmouthOutline() {
-      const url = "https://raw.githubusercontent.com/Jismon003/FloodingDashboard/main/monmouthOutline.json";
+      const url = "https://jismon003.github.io/FloodingDashboard/monmouthOutline.json";
 
       try {
-        const res = await fetch(url);
+        const res = await fetch(url, { cache: "no-store" });
 
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
@@ -2067,42 +2067,45 @@
 
         const data = await res.json();
 
+        // Make sure the Mapbox style is ready
         if (!map.isStyleLoaded()) {
-          map.once("style.load", loadMonmouthOutline);
           return;
         }
 
-        if (!map.getSource("monmouth-outline")) {
-          map.addSource("monmouth-outline", {
-            type: "geojson",
-            data: data
-          });
-        } else {
-          map.getSource("monmouth-outline").setData(data);
+        // Remove existing Monmouth layer/source
+        if (map.getLayer("monmouth-outline-line")) {
+          map.removeLayer("monmouth-outline-line");
         }
 
-        if (!map.getLayer("monmouth-outline-line")) {
-          map.addLayer({
-            id: "monmouth-outline-line",
-            type: "line",
-            source: "monmouth-outline",
-            paint: {
-              "line-color": document.body.classList.contains("dark")
-                ? "white"
-                : "black",
-              "line-width": 2
-            }
-          });
+        if (map.getSource("monmouth-outline")) {
+          map.removeSource("monmouth-outline");
         }
+
+        // Add GeoJSON source
+        map.addSource("monmouth-outline", {
+          type: "geojson",
+          data: data
+        });
+
+        // Add outline
+        map.addLayer({
+          id: "monmouth-outline-line",
+          type: "line",
+          source: "monmouth-outline",
+          paint: {
+            "line-color": document.body.classList.contains("dark")
+              ? "#ffffff"
+              : "#000000",
+            "line-width": 2
+          }
+        });
+
+        console.log("[Monmouth] Outline loaded successfully");
 
       } catch (err) {
         console.error("[Monmouth] Outline load failed:", err);
       }
     }
-
-    map.on("style.load", () => {
-      loadMonmouthOutline();
-    });
 
     const basemapSelect = document.getElementById("basemapSelect");
     const basemapOpacity = document.getElementById("basemapOpacity");

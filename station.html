@@ -782,10 +782,10 @@
 
                 const match = modelFiles.files.find(f => f.endsWith(expected));
 
-                const tideDay = stevensDay.files.find(f => f.includes("Tide") && !f.includes("5_day"));
-                const surgeDay = stevensDay.files.find(f => f.includes("Surge") && !f.includes("5_day"));
-                const tide5 = stevensComposite.files.find(f => f.includes("Tide") && f.includes("5_day"));
-                const surge5 = stevensComposite.files.find(f => f.includes("Surge") && f.includes("5_day"));
+                const tideDay = stevensDay.files.find(f => f.includes("Tide") && !f.includes("5_day") && !f.includes("5 day"));
+                const surgeDay = stevensDay.files.find(f => f.includes("Surge") && !f.includes("5_day") && !f.includes("5 day"));
+                const tide5 = stevensComposite.files.find(f => f.includes("Tide") && (f.includes("5_day") || f.includes("5 day")));
+                const surge5 = stevensComposite.files.find(f => f.includes("Surge") && (f.includes("5_day") || f.includes("5 day")));
 
                 const tideChoice = stevensMode === "5day" ? tide5 : tideDay;
                 const surgeChoice = stevensMode === "5day" ? surge5 : surgeDay;

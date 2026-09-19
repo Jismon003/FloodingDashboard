@@ -2056,27 +2056,24 @@
 
 
     async function loadMonmouthOutline() {
-      const url = "https://hydrographarchive.blob.core.windows.net/$web/monmouthOutline.json";
-      try {
-        const res = await fetch(url); if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const url = "https://raw.githubusercontent.com/USERNAME/REPOSITORY/main/monmouthOutline.json";
 
-        const text = await res.text();
-        let data;
-        try {
-          data = JSON.parse(text);
-        } catch (e) {
-          //////////console.error("[Monmouth] JSON parse failed:", e);
-          return;
-        }
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json();
 
         if (!map.isStyleLoaded()) {
-          //console.warn("[Monmouth] Map style not loaded yet — waiting...");
-          map.once("styledata", () => loadMonmouthOutline());
+          map.once("style.load", () => loadMonmouthOutline());
           return;
         }
 
         if (!map.getSource("monmouth-outline")) {
-          map.addSource("monmouth-outline", { type: "geojson", data });
+          map.addSource("monmouth-outline", {
+            type: "geojson",
+            data: data
+          });
         } else {
           map.getSource("monmouth-outline").setData(data);
         }
@@ -2087,20 +2084,20 @@
             type: "line",
             source: "monmouth-outline",
             paint: {
-              "line-color": document.body.classList.contains("dark") ? "white" : "black",
-              "line-width": 1
+              "line-color": document.body.classList.contains("dark")
+                ? "white"
+                : "black",
+              "line-width": 2
             }
           });
         }
       } catch (err) {
-        ////////console.error("[Monmouth] Outline load failed:", err);
+        console.error("[Monmouth] Outline load failed:", err);
       }
     }
 
-    map.on("style.load", async () => {
-      if (!map.getSource("monmouth-outline")) {
-        await loadMonmouthOutline();
-      }
+    map.on("style.load", () => {
+      loadMonmouthOutline();
     });
 
     const basemapSelect = document.getElementById("basemapSelect");

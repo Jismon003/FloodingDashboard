@@ -2056,16 +2056,19 @@
 
 
     async function loadMonmouthOutline() {
-      const url = "https://raw.githubusercontent.com/USERNAME/REPOSITORY/main/monmouthOutline.json";
+      const url = "https://raw.githubusercontent.com/Jismon003/FloodingDashboard/main/monmouthOutline.json";
 
       try {
         const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
 
         const data = await res.json();
 
         if (!map.isStyleLoaded()) {
-          map.once("style.load", () => loadMonmouthOutline());
+          map.once("style.load", loadMonmouthOutline);
           return;
         }
 
@@ -2091,6 +2094,7 @@
             }
           });
         }
+
       } catch (err) {
         console.error("[Monmouth] Outline load failed:", err);
       }

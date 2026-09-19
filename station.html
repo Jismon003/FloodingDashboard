@@ -562,23 +562,21 @@
 
         async function listBlobs(path) {
             const cleanPath = path.replace(/^\/+|\/+$/g, "");
-            const apiUrl = cleanPath
-                ? `https://api.github.com/repos/Jismon003/FloodingDashboard/contents/Data/${cleanPath}`
-                : `https://api.github.com/repos/Jismon003/FloodingDashboard/contents/Data`;
+            const res = await fetch(`${accountUrl}/${container}/index.json`, { cache: "no-store" });
+            if (!res.ok) throw new Error(`Data index request failed: ${res.status}`);
+            const index = await res.json();
 
-            const res = await fetch(apiUrl);
-            if (!res.ok) throw new Error(`GitHub request failed: ${res.status}`);
-            const items = await res.json();
+            const prefix = cleanPath ? `${cleanPath}/` : "";
+            const allFiles = index.files || [];
 
-            const files = items.filter(item => item.type === "file").map(item => {
-                const prefix = cleanPath ? `${cleanPath}/` : "";
-                return `${prefix}${item.name}`;
-            });
-
-            const dirs = items.filter(item => item.type === "dir").map(item => {
-                const prefix = cleanPath ? `${cleanPath}/` : "";
-                return `${prefix}${item.name}/`;
-            });
+            const files = allFiles.filter(file => file.startsWith(prefix));
+            const dirs = [...new Set(
+                files.map(file => {
+                    const remainder = file.slice(prefix.length);
+                    const slash = remainder.indexOf("/");
+                    return slash === -1 ? null : `${prefix}${remainder.slice(0, slash)}/`;
+                }).filter(Boolean)
+            )];
 
             return { files, dirs };
         }

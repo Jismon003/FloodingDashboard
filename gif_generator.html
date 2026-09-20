@@ -157,49 +157,26 @@
 
   let dataIndex = null;
 
-  loadDataIndex()
+  fetch(`${accountUrl}/${container}/index.json`, { cache: "no-store" })
+    .then(res => {
+      if (!res.ok) throw new Error(`Data index request failed: ${res.status}`);
+      return res.json();
+    })
     .then(index => {
+      dataIndex = index;
+
       const stations = [...new Set(
-        (index.files || [])
+        (dataIndex.files || [])
           .map(file => file.split("/")[0])
           .filter(Boolean)
       )].sort();
 
       stationSel.add(new Option("-- Select Station --", ""));
       stations.forEach(st => {
-        stationSel.add(new Option(st.replace(/_/g, " "), st));
+        stationSel.add(new Option(st, st));
       });
     })
     .catch(err => console.error("Failed to load Data/index.json:", err));
-
-  async function loadDataIndex() {
-    if (dataIndex) return dataIndex;
-
-    const res = await fetch(`${accountUrl}/${container}/index.json`, { cache: "no-store" });
-    if (!res.ok) throw new Error(`Data index request failed: ${res.status}`);
-
-    dataIndex = await res.json();
-    return dataIndex;
-  }
-
-  async function listBlobs(path) {
-    const cleanPath = path.replace(/^\/+|\/+$/g, "");
-    const index = await loadDataIndex();
-
-    const prefix = cleanPath ? `${cleanPath}/` : "";
-    const allFiles = index.files || [];
-
-    const files = allFiles.filter(file => file.startsWith(prefix));
-    const dirs = [...new Set(
-      files.map(file => {
-        const remainder = file.slice(prefix.length);
-        const slash = remainder.indexOf("/");
-        return slash === -1 ? null : `${prefix}${remainder.slice(0, slash)}/`;
-      }).filter(Boolean)
-    )];
-
-    return { files, dirs };
-  }
 
   // Helper to format YYYYMMDD → MM-DD-YYYY
   function formatDateLabel(yyyymmdd) {
@@ -219,18 +196,16 @@
 
     if (!station) return;
 
-    const prefix = `${station}/Stevens/`;
-    const dirs = await listBlobs(prefix);
+    if (!dataIndex) return;
 
-    const forecastDates = dirs
-      .map(d => d.replace(prefix, "").replace(/\/$/, ""))
-      .filter(d => /^\d{8}$/.test(d))
-      .sort((a, b) => {
-        const [hourA, dateA] = a.split("_");
-        const [hourB, dateB] = b.split("_");
-        if (dateA !== dateB) return dateA.localeCompare(dateB);
-        return parseInt(hourA) - parseInt(hourB);
-      });
+    const prefix = `${station}/Stevens/`;
+
+    const forecastDates = [...new Set(
+      (dataIndex.files || [])
+        .filter(file => file.startsWith(prefix))
+        .map(file => file.slice(prefix.length).split("/")[0])
+        .filter(d => /^\d{8}$/.test(d))
+    )].sort((a, b) => a.localeCompare(b));
 
 
     forecastDateSel.add(new Option("-- Select Forecast Date --", ""));
@@ -253,13 +228,16 @@
 
     if (!station || !forecastDate) return;
 
-    const prefix = `${station}/Stevens/${forecastDate}/`;
-    const dirs = await listBlobs(prefix);
+    if (!dataIndex) return;
 
-    const runtimes = dirs
-      .map(d => d.replace(prefix, "").replace(/\/$/, ""))
-      .filter(d => /^\d{2}_\d{8}$/.test(d))
-      .sort((a, b) => b.localeCompare(a));
+    const prefix = `${station}/Stevens/${forecastDate}/`;
+
+    const runtimes = [...new Set(
+      (dataIndex.files || [])
+        .filter(file => file.startsWith(prefix))
+        .map(file => file.slice(prefix.length).split("/")[0])
+        .filter(d => /^\d{2}_\d{8}$/.test(d))
+    )].sort((a, b) => b.localeCompare(a));
 
     runtimeMap = {};
     runtimes.forEach(rt => {
@@ -338,16 +316,17 @@ async function updateFrameCount() {
   }
 
   const prefix = `${stationSel.value}/Stevens/${forecastDate}/`;
-  const allDirs = await listBlobs(prefix);
-  const allRuns = allDirs
-    .map(d => d.replace(prefix, "").replace(/\/$/, ""))
-    .filter(d => /^\d{2}_\d{8}$/.test(d))
-    .sort((a, b) => {
-      const [hourA, dateA] = a.split("_");
-      const [hourB, dateB] = b.split("_");
-      if (dateA !== dateB) return dateA.localeCompare(dateB);
-      return parseInt(hourA) - parseInt(hourB);
-    });
+  const allRuns = [...new Set(
+    (dataIndex.files || [])
+      .filter(file => file.startsWith(prefix))
+      .map(file => file.slice(prefix.length).split("/")[0])
+      .filter(d => /^\d{2}_\d{8}$/.test(d))
+  )].sort((a, b) => {
+    const [hourA, dateA] = a.split("_");
+    const [hourB, dateB] = b.split("_");
+    if (dateA !== dateB) return dateA.localeCompare(dateB);
+    return parseInt(hourA) - parseInt(hourB);
+  });
 
   const startKey = `${startHour}_${startDate}`;
   const endKey = `${endHour}_${endDate}`;
@@ -439,11 +418,12 @@ document.getElementById("generateBtn").addEventListener("click", async () => {
   // Base directory for this forecast
   const forecastPrefix = `${station}/Stevens/${forecastDate}/`;
 
-  const allDirs = await listBlobs(forecastPrefix);
-  const allRuns = allDirs
-  .map(d => d.replace(forecastPrefix, "").replace(/\/$/, ""))
-  .filter(d => /^\d{2}_\d{8}$/.test(d))
-  .sort((a, b) => {
+  const allRuns = [...new Set(
+    (dataIndex.files || [])
+      .filter(file => file.startsWith(forecastPrefix))
+      .map(file => file.slice(forecastPrefix.length).split("/")[0])
+      .filter(d => /^\d{2}_\d{8}$/.test(d))
+  )].sort((a, b) => {
     const [hourA, dateA] = a.split("_");
     const [hourB, dateB] = b.split("_");
     if (dateA !== dateB) return dateA.localeCompare(dateB);
@@ -496,8 +476,8 @@ document.getElementById("generateBtn").addEventListener("click", async () => {
   const runPrefix = `${forecastPrefix}${run}/`;
   const imageType = document.getElementById("imageType").value.toLowerCase();
 
-  // Fetch list of files for this run
-  const files = (await listBlobs(runPrefix)).files;
+  // Find files for this run from the already-loaded index
+  const files = (dataIndex.files || []).filter(file => file.startsWith(runPrefix));
 
   // Find matching image file based on dropdown
   const selectedFile = files.find(f => f.toLowerCase().includes(`${imageType}.png`));

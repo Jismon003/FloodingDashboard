@@ -149,15 +149,8 @@
   const container = "Data";
 
   // ============================================================
-  // STATION LIST
+  // DATA INDEX
   // ============================================================
-  const stations = [
-    "Keansburg",
-    "Manasquan",
-    "Sandy_Hook",
-    "Sea_Bright"
-  ];
-
   const stationSel = document.getElementById("stationSelect");
   const forecastDateSel = document.getElementById("forecastDate");
   const startDateSel = document.getElementById("startDate");
@@ -165,19 +158,39 @@
   const startHourSel = document.getElementById("startHour");
   const endHourSel = document.getElementById("endHour");
 
-  stationSel.add(new Option("-- Select Station --", ""));
-  stations.forEach(st => {
-    const opt = new Option(st.replace(/_/g, " "), st);
-    stationSel.add(opt);
-  });
+  const dataIndexUrl = `${accountUrl}/${container}/index.json`;
+  let dataIndex = null;
+
+  async function loadDataIndex() {
+    const res = await fetch(dataIndexUrl, { cache: "no-store" });
+    if (!res.ok) throw new Error(`Data index request failed: ${res.status}`);
+    dataIndex = await res.json();
+    return dataIndex;
+  }
+
+  async function loadStations() {
+    const index = await loadDataIndex();
+    const files = index.files || [];
+
+    const stations = [...new Set(
+      files
+        .map(file => file.split("/")[0])
+        .filter(station => station)
+    )].sort();
+
+    stationSel.innerHTML = "";
+    stationSel.add(new Option("-- Select Station --", ""));
+
+    stations.forEach(st => {
+      stationSel.add(new Option(st.replace(/_/g, " "), st));
+    });
+  }
 
   async function listBlobs(prefix = "") {
-    const cleanPrefix = prefix.replace(/^\/+|\/+$/g, "");
-    const res = await fetch(`${accountUrl}/${container}/index.json`, { cache: "no-store" });
-    if (!res.ok) throw new Error(`Data index request failed: ${res.status}`);
+    if (!dataIndex) await loadDataIndex();
 
-    const index = await res.json();
-    const allFiles = index.files || [];
+    const cleanPrefix = prefix.replace(/^\/+|\/+$/g, "");
+    const allFiles = dataIndex.files || [];
     const filePrefix = cleanPrefix ? `${cleanPrefix}/` : "";
     const matchingFiles = allFiles.filter(file => file.startsWith(filePrefix));
 
@@ -200,6 +213,12 @@
     return `${m}-${d}-${y}`;
   }
 
+  loadStations().catch(err => {
+    console.error("Failed to load Data/index.json:", err);
+    stationSel.innerHTML = "";
+    stationSel.add(new Option("ERROR LOADING DATA", ""));
+  });
+
   stationSel.addEventListener("change", async () => {
     const station = stationSel.value;
     forecastDateSel.innerHTML = "";
@@ -216,12 +235,7 @@
     const forecastDates = dirs
       .map(d => d.replace(prefix, "").replace(/\/$/, ""))
       .filter(d => /^\d{8}$/.test(d))
-      .sort((a, b) => {
-        const [hourA, dateA] = a.split("_");
-        const [hourB, dateB] = b.split("_");
-        if (dateA !== dateB) return dateA.localeCompare(dateB);
-        return parseInt(hourA) - parseInt(hourB);
-      });
+      .sort((a, b) => a.localeCompare(b));
 
 
     forecastDateSel.add(new Option("-- Select Forecast Date --", ""));

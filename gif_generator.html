@@ -155,6 +155,8 @@
   const startHourSel = document.getElementById("startHour");
   const endHourSel = document.getElementById("endHour");
 
+  let dataIndex = null;
+
   loadDataIndex()
     .then(index => {
       const stations = [...new Set(
@@ -169,8 +171,6 @@
       });
     })
     .catch(err => console.error("Failed to load Data/index.json:", err));
-
-  let dataIndex = null;
 
   async function loadDataIndex() {
     if (dataIndex) return dataIndex;

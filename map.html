@@ -1806,7 +1806,7 @@
           }
         ]
       },
-      center: [-74.26, 40.29],
+      center: [-74.36, 40.29],
       zoom: 10,
       attributionControl: false
     });
@@ -1819,13 +1819,13 @@
 
     if (window.innerWidth <= 768) {
       map.setZoom(9);
-      map.setCenter([-74.26, 40.29]);
+      map.setCenter([-74.36, 40.29]);
     }
 
     // --- Home button: fly to saved home view ---
     function resetMap() {
       const saved = JSON.parse(localStorage.getItem("dashboardSettings") || "{}");
-      const center = saved.homeCenter || [-74.26, 40.29];
+      const center = saved.homeCenter || [-74.36, 40.29];
       const zoom = saved.homeZoom || 10;
       const bearing = saved.homeBearing || 0;
       const pitch = saved.homePitch || 0;
@@ -1878,7 +1878,7 @@
     }
 
     document.getElementById("defaultMapViewBtn").addEventListener("click", () => {
-      const defaultCenter = [-74.26, 40.29];
+      const defaultCenter = [-74.36, 40.29];
       const defaultZoom = 10;
       const defaultBearing = 0;
       const defaultPitch = 0;

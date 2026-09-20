@@ -145,23 +145,17 @@
   // ============================================================
   // CONFIGURATION
   // ============================================================
-  const accountUrl = "https://hydrographarchive.blob.core.windows.net";
-  const container = "$web";
-  const sasToken =
-    "sp=rl&st=2025-09-09T17:44:42Z&se=2035-02-02T02:59:42Z&spr=https&sv=2024-11-04&sr=c&sig=UOgYKdx4m17fcGGgfzQB002pKOpbw%2FI67SBuuJxkIoI%3D";
+  const accountUrl = "https://jismon003.github.io/FloodingDashboard";
+  const container = "Data";
 
   // ============================================================
   // STATION LIST
   // ============================================================
   const stations = [
-    "Barnaget_Light",
     "Keansburg",
     "Manasquan",
-    "Mantoloking",
     "Sandy_Hook",
-    "Sea_Bright",
-    "Ship_Bottom",
-    "Tuckerton"
+    "Sea_Bright"
   ];
 
   const stationSel = document.getElementById("stationSelect");
@@ -178,25 +172,24 @@
   });
 
   async function listBlobs(prefix = "") {
-    let marker = "";
-    let allDirs = [];
+    const cleanPrefix = prefix.replace(/^\/+|\/+$/g, "");
+    const res = await fetch(`${accountUrl}/${container}/index.json`, { cache: "no-store" });
+    if (!res.ok) throw new Error(`Data index request failed: ${res.status}`);
 
-    do {
-      const url = `${accountUrl}/${container}?restype=container&comp=list&prefix=${encodeURIComponent(prefix)}&delimiter=/&marker=${marker}&${sasToken}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`List failed: ${res.status} ${res.statusText}`);
+    const index = await res.json();
+    const allFiles = index.files || [];
+    const filePrefix = cleanPrefix ? `${cleanPrefix}/` : "";
+    const matchingFiles = allFiles.filter(file => file.startsWith(filePrefix));
 
-      const text = await res.text();
-      const parser = new DOMParser();
-      const xml = parser.parseFromString(text, "application/xml");
-      const dirs = [...xml.querySelectorAll("BlobPrefix")].map(b => b.querySelector("Name").textContent);
-      allDirs.push(...dirs);
+    const dirs = [...new Set(
+      matchingFiles.map(file => {
+        const remainder = file.slice(filePrefix.length);
+        const slash = remainder.indexOf("/");
+        return slash === -1 ? null : `${filePrefix}${remainder.slice(0, slash)}/`;
+      }).filter(Boolean)
+    )];
 
-      const nextMarker = xml.querySelector("NextMarker");
-      marker = nextMarker && nextMarker.textContent ? nextMarker.textContent : "";
-    } while (marker);
-
-    return allDirs;
+    return { files: matchingFiles, dirs };
   }
 
   // Helper to format YYYYMMDD → MM-DD-YYYY
@@ -495,25 +488,7 @@ document.getElementById("generateBtn").addEventListener("click", async () => {
   const imageType = document.getElementById("imageType").value.toLowerCase();
 
   // Fetch list of files for this run
-  const files = await (async () => {
-    let marker = "";
-    let allFiles = [];
-    do {
-      const url = `${accountUrl}/${container}?restype=container&comp=list&prefix=${encodeURIComponent(runPrefix)}&marker=${marker}&${sasToken}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`List failed: ${res.status} ${res.statusText}`);
-
-      const text = await res.text();
-      const parser = new DOMParser();
-      const xml = parser.parseFromString(text, "application/xml");
-      const blobs = [...xml.querySelectorAll("Blob")].map(b => b.querySelector("Name").textContent);
-      allFiles.push(...blobs);
-
-      const nextMarker = xml.querySelector("NextMarker");
-      marker = nextMarker && nextMarker.textContent ? nextMarker.textContent : "";
-    } while (marker);
-    return allFiles;
-  })();
+  const files = (await listBlobs(runPrefix)).files;
 
   // Find matching image file based on dropdown
   const selectedFile = files.find(f => f.toLowerCase().includes(`${imageType}.png`));
@@ -522,7 +497,7 @@ document.getElementById("generateBtn").addEventListener("click", async () => {
     continue;
   }
 
-  const imageUrl = `${accountUrl}/${container}/${selectedFile}?${sasToken}`;
+  const imageUrl = `${accountUrl}/${container}/${selectedFile}`;
 
   try {
     const img = await loadImage(imageUrl);

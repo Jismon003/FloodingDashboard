@@ -148,9 +148,6 @@
   const accountUrl = "https://jismon003.github.io/FloodingDashboard";
   const container = "Data";
 
-  // ============================================================
-  // DATA INDEX
-  // ============================================================
   const stationSel = document.getElementById("stationSelect");
   const forecastDateSel = document.getElementById("forecastDate");
   const startDateSel = document.getElementById("startDate");
@@ -158,51 +155,50 @@
   const startHourSel = document.getElementById("startHour");
   const endHourSel = document.getElementById("endHour");
 
-  const dataIndexUrl = `${accountUrl}/${container}/index.json`;
+  loadDataIndex()
+    .then(index => {
+      const stations = [...new Set(
+        (index.files || [])
+          .map(file => file.split("/")[0])
+          .filter(Boolean)
+      )].sort();
+
+      stationSel.add(new Option("-- Select Station --", ""));
+      stations.forEach(st => {
+        stationSel.add(new Option(st.replace(/_/g, " "), st));
+      });
+    })
+    .catch(err => console.error("Failed to load Data/index.json:", err));
+
   let dataIndex = null;
 
   async function loadDataIndex() {
-    const res = await fetch(dataIndexUrl, { cache: "no-store" });
+    if (dataIndex) return dataIndex;
+
+    const res = await fetch(`${accountUrl}/${container}/index.json`, { cache: "no-store" });
     if (!res.ok) throw new Error(`Data index request failed: ${res.status}`);
+
     dataIndex = await res.json();
     return dataIndex;
   }
 
-  async function loadStations() {
+  async function listBlobs(path) {
+    const cleanPath = path.replace(/^\/+|\/+$/g, "");
     const index = await loadDataIndex();
-    const files = index.files || [];
 
-    const stations = [...new Set(
-      files
-        .map(file => file.split("/")[0])
-        .filter(station => station)
-    )].sort();
+    const prefix = cleanPath ? `${cleanPath}/` : "";
+    const allFiles = index.files || [];
 
-    stationSel.innerHTML = "";
-    stationSel.add(new Option("-- Select Station --", ""));
-
-    stations.forEach(st => {
-      stationSel.add(new Option(st.replace(/_/g, " "), st));
-    });
-  }
-
-  async function listBlobs(prefix = "") {
-    if (!dataIndex) await loadDataIndex();
-
-    const cleanPrefix = prefix.replace(/^\/+|\/+$/g, "");
-    const allFiles = dataIndex.files || [];
-    const filePrefix = cleanPrefix ? `${cleanPrefix}/` : "";
-    const matchingFiles = allFiles.filter(file => file.startsWith(filePrefix));
-
+    const files = allFiles.filter(file => file.startsWith(prefix));
     const dirs = [...new Set(
-      matchingFiles.map(file => {
-        const remainder = file.slice(filePrefix.length);
+      files.map(file => {
+        const remainder = file.slice(prefix.length);
         const slash = remainder.indexOf("/");
-        return slash === -1 ? null : `${filePrefix}${remainder.slice(0, slash)}/`;
+        return slash === -1 ? null : `${prefix}${remainder.slice(0, slash)}/`;
       }).filter(Boolean)
     )];
 
-    return { files: matchingFiles, dirs };
+    return { files, dirs };
   }
 
   // Helper to format YYYYMMDD → MM-DD-YYYY
@@ -212,12 +208,6 @@
     const d = yyyymmdd.slice(6, 8);
     return `${m}-${d}-${y}`;
   }
-
-  loadStations().catch(err => {
-    console.error("Failed to load Data/index.json:", err);
-    stationSel.innerHTML = "";
-    stationSel.add(new Option("ERROR LOADING DATA", ""));
-  });
 
   stationSel.addEventListener("change", async () => {
     const station = stationSel.value;
@@ -235,7 +225,12 @@
     const forecastDates = dirs
       .map(d => d.replace(prefix, "").replace(/\/$/, ""))
       .filter(d => /^\d{8}$/.test(d))
-      .sort((a, b) => a.localeCompare(b));
+      .sort((a, b) => {
+        const [hourA, dateA] = a.split("_");
+        const [hourB, dateB] = b.split("_");
+        if (dateA !== dateB) return dateA.localeCompare(dateB);
+        return parseInt(hourA) - parseInt(hourB);
+      });
 
 
     forecastDateSel.add(new Option("-- Select Forecast Date --", ""));

@@ -399,6 +399,10 @@ document.getElementById("maxRangeBtn").addEventListener("click", () => {
 // GENERATE BUTTON 
 // ============================================================
 document.getElementById("generateBtn").addEventListener("click", async () => {
+  console.log("=== Generate GIF started ===");
+  console.log("Cached data index:", dataIndex);
+  console.log("Cached file count:", dataIndex?.files?.length);
+
   const station = stationSel.value;
   const forecastDate = forecastDateSel.value;
   const startDate = startDateSel.value;
@@ -417,6 +421,7 @@ document.getElementById("generateBtn").addEventListener("click", async () => {
 
   // Base directory for this forecast
   const forecastPrefix = `${station}/Stevens/${forecastDate}/`;
+  console.log("Forecast prefix:", forecastPrefix);
 
   const allRuns = [...new Set(
     (dataIndex.files || [])
@@ -454,6 +459,10 @@ document.getElementById("generateBtn").addEventListener("click", async () => {
     return false;
   });
 
+  console.log("All available runs:", allRuns);
+  console.log("Selected runs:", selectedRuns);
+  console.log("Selected run count:", selectedRuns.length);
+
   // Setup canvas and GIF
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
@@ -476,20 +485,31 @@ document.getElementById("generateBtn").addEventListener("click", async () => {
   const runPrefix = `${forecastPrefix}${run}/`;
   const imageType = document.getElementById("imageType").value.toLowerCase();
 
+  console.log("--- Processing run ---");
+  console.log("Run:", run);
+  console.log("Run prefix:", runPrefix);
+  console.log("Image type:", imageType);
+
   // Find files for this run from the already-loaded index
   const files = (dataIndex.files || []).filter(file => file.startsWith(runPrefix));
+  console.log("Files found for run:", files);
+  console.log("Files found count:", files.length);
 
   // Find matching image file based on dropdown
   const selectedFile = files.find(f => f.toLowerCase().includes(`${imageType}.png`));
+  console.log("Selected image file:", selectedFile);
   if (!selectedFile) {
     console.warn(`⚠️ No ${imageType} image found in ${runPrefix}`);
     continue;
   }
 
   const imageUrl = `${accountUrl}/${container}/${selectedFile}`;
+  console.log("Image URL:", imageUrl);
 
   try {
+    console.log("Attempting image load...");
     const img = await loadImage(imageUrl);
+    console.log("Image loaded successfully:", img.width, "x", img.height);
     canvas.width = img.width;
     canvas.height = img.height;
 
@@ -505,9 +525,18 @@ document.getElementById("generateBtn").addEventListener("click", async () => {
 
     gif.addFrame(ctx, { copy: true, delay: frameDelay });
   } catch (err) {
-    console.warn(`❌ Failed to load ${imageType} image in ${runPrefix}`, err);
+    console.error("IMAGE LOAD FAILED");
+    console.error("Run:", run);
+    console.error("Run prefix:", runPrefix);
+    console.error("Image type:", imageType);
+    console.error("Image URL:", imageUrl);
+    console.error("Error:", err);
+    console.error("Error message:", err?.message);
+    console.error("Error stack:", err?.stack);
   }
 }
+
+  console.log("=== All image frames processed ===");
 
   // Add a final pause frame (duplicate of the last one) for half a second
   if (selectedRuns.length > 0) {
@@ -515,6 +544,10 @@ document.getElementById("generateBtn").addEventListener("click", async () => {
   }
 
 gif.on("finished", blob => {
+  console.log("=== GIF finished ===");
+  console.log("Generated blob:", blob);
+  console.log("Blob size:", blob?.size);
+
   const url = URL.createObjectURL(blob);
   const type = document.getElementById("imageType").value.toLowerCase();
 

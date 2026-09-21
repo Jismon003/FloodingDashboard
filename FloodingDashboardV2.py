@@ -1,7 +1,6 @@
 import asyncio
 import os
 import re
-import shutil
 from pyppeteer import launch
 import urllib.request
 from urllib.parse import urljoin, urlparse
@@ -18,7 +17,7 @@ AZURE_PREFIX = ""
 # ==========================
 # LOGGER
 # ==========================
-DEBUG_FILE = r"C:\Users\simon\OneDrive\Documents\Sea Bright\Storm\debug.log"
+DEBUG_FILE = r"D:\Spare Storage\Projects\Weather\Flooding Dashboard\Temp\debug.log"
 _last_log_date = None
 
 def log(message: str):
@@ -118,38 +117,38 @@ STATIONS = [
         "https://slosh.nws.noaa.gov/petss_gefs/fixed/images/all/mllw/8632591.png"
     ),
     # Ocean
-    (
-        "Mantoloking",
-        "U222",
-        "https://water.noaa.gov/resources/hydrographs/mtln4_hg.png",
-        "https://slosh.nws.noaa.gov/petss/fixed/images/all/mllw/8532786.png",
-        "https://slosh.nws.noaa.gov/etsurge2.0/fixed/images/all/mllw/8532786.png",
-        "https://slosh.nws.noaa.gov/petss_gefs/fixed/images/all/mllw/8532786.png"
-    ),
-    (
-        "Barnaget Light",
-        "U225",
-        "https://water.noaa.gov/resources/hydrographs/bgln4_hg.png",
-        "https://slosh.nws.noaa.gov/petss/fixed/images/all/mllw/8533615.png",
-        "https://slosh.nws.noaa.gov/etsurge2.0/fixed/images/all/mllw/8533615.png",
-        "https://slosh.nws.noaa.gov/petss_gefs/fixed/images/all/mllw/8533615.png"
-    ),
-    (
-        "Ship Bottom",
-        "U226",
-        "https://water.noaa.gov/resources/hydrographs/sbtn4_hg.png",
-        "https://slosh.nws.noaa.gov/petss/fixed/images/all/mllw/8533935.png",
-        "https://slosh.nws.noaa.gov/etsurge2.0/fixed/images/all/mllw/8533935.png",
-        "https://slosh.nws.noaa.gov/petss_gefs/fixed/images/all/mllw/8533935.png"
-    ),
-    (
-        "Tuckerton",
-        "U227",
-        "https://water.noaa.gov/resources/hydrographs/tktn4_hg.png",
-        "https://slosh.nws.noaa.gov/petss/fixed/images/all/mllw/8534319.png",
-        "https://slosh.nws.noaa.gov/etsurge2.0/fixed/images/all/mllw/8534319.png",
-        "https://slosh.nws.noaa.gov/petss_gefs/fixed/images/all/mllw/8534319.png"
-    ),
+#    (
+#        "Mantoloking",
+#        "U222",
+#        "https://water.noaa.gov/resources/hydrographs/mtln4_hg.png",
+#        "https://slosh.nws.noaa.gov/petss/fixed/images/all/mllw/8532786.png",
+#        "https://slosh.nws.noaa.gov/etsurge2.0/fixed/images/all/mllw/8532786.png",
+#        "https://slosh.nws.noaa.gov/petss_gefs/fixed/images/all/mllw/8532786.png"
+#    ),
+#    (
+#        "Barnaget Light",
+#        "U225",
+#        "https://water.noaa.gov/resources/hydrographs/bgln4_hg.png",
+#        "https://slosh.nws.noaa.gov/petss/fixed/images/all/mllw/8533615.png",
+#        "https://slosh.nws.noaa.gov/etsurge2.0/fixed/images/all/mllw/8533615.png",
+#        "https://slosh.nws.noaa.gov/petss_gefs/fixed/images/all/mllw/8533615.png"
+#    ),
+#    (
+#        "Ship Bottom",
+#        "U226",
+#        "https://water.noaa.gov/resources/hydrographs/sbtn4_hg.png",
+#        "https://slosh.nws.noaa.gov/petss/fixed/images/all/mllw/8533935.png",
+#        "https://slosh.nws.noaa.gov/etsurge2.0/fixed/images/all/mllw/8533935.png",
+#        "https://slosh.nws.noaa.gov/petss_gefs/fixed/images/all/mllw/8533935.png"
+#    ),
+#    (
+#        "Tuckerton",
+#        "U227",
+#        "https://water.noaa.gov/resources/hydrographs/tktn4_hg.png",
+#        "https://slosh.nws.noaa.gov/petss/fixed/images/all/mllw/8534319.png",
+#        "https://slosh.nws.noaa.gov/etsurge2.0/fixed/images/all/mllw/8534319.png",
+#        "https://slosh.nws.noaa.gov/petss_gefs/fixed/images/all/mllw/8534319.png"
+ #   ),
 ]
 
 SURGE_SKIP_FORECAST_OBS = ["Manasquan"]
@@ -163,7 +162,7 @@ CHROME_CANDIDATES = [
     r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
 ]
 
-TEMP_DIR = r"C:\Users\simon\OneDrive\Documents\Sea Bright\Storm\Temp"
+TEMP_DIR = r"D:\Spare Storage\Projects\Weather\Flooding Dashboard\Temp"
 os.makedirs(TEMP_DIR, exist_ok=True)
 TEMP_FILES = []
 
@@ -196,7 +195,7 @@ baseline_template = cv2.cvtColor(pattern_rgb, cv2.COLOR_RGB2BGR)
 # ==========================
 # The Python program lives in the cloned FloodingDashboard repository.
 # All published data is stored under /Data/.
-REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = r"D:\Spare Storage\Projects\Weather\Flooding Dashboard\FloodingDashboard"
 DATA_DIR = os.path.join(REPO_ROOT, "Data")
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -220,12 +219,40 @@ def save_to_repository(local_file: str, remote_path: str):
         log(f"ERROR saving {local_file} to repository: {e}")
 
 
+def write_data_index():
+    """Rebuild index.json from the complete /Data directory."""
+    index_file = os.path.join(DATA_DIR, "index.json")
+    files = []
+
+    for root, dirs, filenames in os.walk(DATA_DIR):
+        for filename in filenames:
+            if filename == "index.json":
+                continue
+            full_path = os.path.join(root, filename)
+            rel_path = os.path.relpath(full_path, DATA_DIR).replace("\\", "/")
+            files.append(rel_path)
+
+    files.sort()
+
+    with open(index_file, "w", encoding="utf-8") as f:
+        json.dump({"files": files}, f, separators=(",", ":"))
+
+    log(f"Data index rebuilt: {len(files)} files")
+
 def git_publish_repository():
-    """Commit and push changed /Data files to GitHub."""
+    """Commit and push changed /Data files to GitHub with detailed debugging."""
     try:
         import subprocess
 
+        write_data_index()
+
+        log("========== GITHUB PUBLISH START ==========")
+        log(f"Repository root: {REPO_ROOT}")
+        log(f"Data directory: {DATA_DIR}")
+
         def run_git(args):
+            log(f"RUNNING: git {' '.join(args)}")
+
             result = subprocess.run(
                 ["git"] + args,
                 cwd=REPO_ROOT,
@@ -234,26 +261,149 @@ def git_publish_repository():
                 encoding="utf-8",
                 errors="replace"
             )
+
+            log(f"RETURN CODE: {result.returncode}")
+
+            if result.stdout.strip():
+                log(f"STDOUT:\n{result.stdout.strip()}")
+
+            if result.stderr.strip():
+                log(f"STDERR:\n{result.stderr.strip()}")
+
             if result.returncode != 0:
-                raise RuntimeError(result.stderr.strip() or result.stdout.strip())
+                raise RuntimeError(
+                    result.stderr.strip() or result.stdout.strip()
+                )
+
             return result.stdout.strip()
 
+        # --------------------------------------------------
+        # REPOSITORY INFORMATION
+        # --------------------------------------------------
+
+        log("Checking current Git branch...")
+        run_git(["branch", "--show-current"])
+
+        log("Checking GitHub remote...")
+        run_git(["remote", "-v"])
+
+        # --------------------------------------------------
+        # STATUS BEFORE STAGING
+        # --------------------------------------------------
+
+        log("========== GIT STATUS BEFORE STAGING ==========")
+        run_git(["status", "--short"])
+
+        # --------------------------------------------------
+        # STAGE DATA
+        # --------------------------------------------------
+
+        log("========== STAGING DATA DIRECTORY ==========")
         run_git(["add", "Data"])
-        status = run_git(["status", "--porcelain", "--", "Data"])
+
+        # --------------------------------------------------
+        # SHOW EXACTLY WHAT IS STAGED
+        # --------------------------------------------------
+
+        log("========== GIT STATUS AFTER STAGING ==========")
+
+        status = run_git(["status", "--short", "--", "Data"])
 
         if not status:
-            log("No changes to publish to GitHub.")
+            log("NO DATA CHANGES DETECTED.")
+            log("Nothing will be committed.")
+            log("Nothing will be pushed.")
+            log("========== GITHUB PUBLISH END ==========")
             return
 
+        # --------------------------------------------------
+        # SHOW FILES BEING COMMITTED
+        # --------------------------------------------------
+
+        log("========== FILES BEING COMMITTED ==========")
+
+        run_git([
+            "diff",
+            "--cached",
+            "--name-status",
+            "--",
+            "Data"
+        ])
+
+        # Show summary of changes
+        log("========== CHANGE SUMMARY ==========")
+
+        run_git([
+            "diff",
+            "--cached",
+            "--stat",
+            "--",
+            "Data"
+        ])
+
+        # --------------------------------------------------
+        # CREATE COMMIT
+        # --------------------------------------------------
+
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        run_git(["commit", "-m", f"Update weather data {timestamp}"])
+        commit_message = f"Interval data update {timestamp}"
+
+        log("========== CREATING COMMIT ==========")
+        log(f"Commit message: {commit_message}")
+
+        run_git([
+            "commit",
+            "-m",
+            commit_message
+        ])
+
+        # --------------------------------------------------
+        # SHOW COMMIT THAT WAS CREATED
+        # --------------------------------------------------
+
+        log("========== COMMIT CREATED ==========")
+
+        run_git([
+            "log",
+            "-1",
+            "--oneline"
+        ])
+
+        # --------------------------------------------------
+        # SHOW CURRENT STATUS
+        # --------------------------------------------------
+
+        log("========== STATUS BEFORE PUSH ==========")
+
+        run_git(["status", "--short"])
+
+        # --------------------------------------------------
+        # PUSH TO GITHUB
+        # --------------------------------------------------
+
+        log("========== PUSHING TO GITHUB ==========")
+        log("Sending committed Data changes to the configured GitHub remote...")
+
         run_git(["push"])
 
-        log("Repository successfully pushed to GitHub.")
+        # --------------------------------------------------
+        # VERIFY PUSH
+        # --------------------------------------------------
+
+        log("========== PUSH COMPLETED ==========")
+
+        log("Checking repository status after push...")
+        run_git(["status", "--short"])
+
+        log("Latest local commit:")
+        run_git(["log", "-1", "--oneline"])
+
+        log("========== GITHUB PUBLISH SUCCESS ==========")
 
     except Exception as e:
-        log(f"ERROR publishing repository to GitHub: {e}")
-
+        log("========== GITHUB PUBLISH FAILED ==========")
+        log(f"ERROR: {e}")
+        log("========== GITHUB PUBLISH END ==========")
 
 # ==========================
 # CLEANUP HELPERS
@@ -341,18 +491,10 @@ XPATH_IMAGE_1 = "/html/body/div[7]/div[2]/div/div[2]/div[1]/img"
 XPATH_IMAGE_2 = "/html/body/div[7]/div[2]/div/div[4]/div/img"
 
 def find_browser():
-    # Windows Chrome/Edge
     for path in CHROME_CANDIDATES:
         if os.path.exists(path):
             return path
-
-    # Linux / GitHub Actions Chromium
-    for browser in ["chromium", "chromium-browser", "google-chrome", "google-chrome-stable"]:
-        path = shutil.which(browser)
-        if path:
-            return path
-
-    raise FileNotFoundError("Could not find Chrome/Edge/Chromium.")
+    raise FileNotFoundError("Could not find Chrome/Edge.")
 
 async def set_input_value(page, xpath, value):
     elem = await page.waitForXPath(xpath, {"timeout": 15000})
@@ -631,7 +773,7 @@ async def fetch_stevens(browser, station_name, station_code, valid_dates, dropdo
             src1 = await (await el1.getProperty("src")).jsonValue()
             if not urlparse(src1).scheme:
                 src1 = urljoin(page.url, src1)
-            tide_5day = os.path.join(TEMP_DIR, f"{ts} - {station_name} 5 day {start_date}-Tide.png")
+            tide_5day = os.path.join(TEMP_DIR, f"{ts} - {station_name} 5_day {start_date}-Tide.png")
             urllib.request.urlretrieve(src1, tide_5day)
             analyze_and_annotate(tide_5day)
             save_to_repository(
@@ -644,7 +786,7 @@ async def fetch_stevens(browser, station_name, station_code, valid_dates, dropdo
             src2 = await (await el2.getProperty("src")).jsonValue()
             if not urlparse(src2).scheme:
                 src2 = urljoin(page.url, src2)
-            surge_5day = os.path.join(TEMP_DIR, f"{ts} - {station_name} 5 day {start_date}-Surge.png")
+            surge_5day = os.path.join(TEMP_DIR, f"{ts} - {station_name} 5_day {start_date}-Surge.png")
             urllib.request.urlretrieve(src2, surge_5day)
             analyze_and_annotate_surge(surge_5day, station_name)
             save_to_repository(
@@ -755,80 +897,80 @@ async def fetch_all_tropicaltidbits(browser):
             cfg["product"]
         )
 
-# ==========================
-# PIVOTAL WEATHER CONFIG
-# ==========================
-PIVOTAL_MODELS = [
-    {
-        "name": "ECMWF - Sfc Wind/MSLP",
-        "model": "ecmwf",
-        "product": "sfcwind_mslp",
-        "region": "us_ne"
-    },
-]
-
-# ==========================
-# PIVOTAL WEATHER FETCH (formatted like TropicalTidbits)
-# ==========================
-def fetch_pivotalweather(name, model, product, region):
-    try:
-        ny_tz = pytz.timezone("America/New_York")
-        now = datetime.now(ny_tz)
-
-        # Determine current runtime (00, 06, 12, 18)
-        cycles = [0, 6, 12, 18]
-        cycle_hour = max([ch for ch in cycles if ch <= now.hour], default=18)
-        runtime = now.strftime("%Y%m%d") + f"{cycle_hour:02d}"
-
-        # Previous 6-hour cycle
-        prev_time = now.replace(hour=cycle_hour) - timedelta(hours=6)
-        prev_cycle_hour = (cycle_hour - 6) % 24
-        prev_runtime = prev_time.strftime("%Y%m%d") + f"{prev_cycle_hour:02d}"
-
-        runtimes = [runtime, prev_runtime]
-
-        for run_id in runtimes:
-            for fh in FORECAST_HOURS:
-                try:
-                    # Construct the URL
-                    url = (
-                        f"https://m1o.pivotalweather.com/maps/models/"
-                        f"{model}_full/{run_id}/{fh:03d}/{product}.{region}.png"
-                    )
-
-                    # Build the desired filename and folder structure
-                    filename = f"{run_id}_{model}_{product}_{region}_{fh}.png"
-                    local_path = os.path.join(TEMP_DIR, filename)
-                    remote_path = f"{AZURE_PREFIX}Models/{run_id}/{model}/{filename}"
-
-                    # Download image directly
-                    urllib.request.urlretrieve(url, local_path)
-
-                    # Validate download size (skip empty PNGs)
-                    if os.path.exists(local_path) and os.path.getsize(local_path) < 10000:
-                        log(f"SKIPPED (empty file): {filename}")
-                        os.remove(local_path)
-                        continue
-                    # Upload to Azure
-                    save_to_repository(local_path, remote_path)
-                except Exception as e:
-                    log(f"ERROR fetching Pivotal {model} fh={fh} run={run_id}: {e}")
-    except Exception as e:
-        log(f"ERROR in fetch_pivotalweather({name}): {e}")
-
-# ==========================
-# PIVOTAL WEATHER FETCH (all configs)
-# ==========================
-def fetch_all_pivotalweather():
-    for cfg in PIVOTAL_MODELS:
-        fetch_pivotalweather(
-            cfg["name"],
-            cfg["model"],
-            cfg["product"],
-            cfg["region"]
-        )
-
-
+# # ==========================
+# # PIVOTAL WEATHER CONFIG
+# # ==========================
+# PIVOTAL_MODELS = [
+#     {
+#         "name": "ECMWF - Sfc Wind/MSLP",
+#         "model": "ecmwf",
+#         "product": "sfcwind_mslp",
+#         "region": "us_ne"
+#     },
+# ]
+#
+# # ==========================
+# # PIVOTAL WEATHER FETCH (formatted like TropicalTidbits)
+# # ==========================
+# def fetch_pivotalweather(name, model, product, region):
+#     try:
+#         ny_tz = pytz.timezone("America/New_York")
+#         now = datetime.now(ny_tz)
+#
+#         # Determine current runtime (00, 06, 12, 18)
+#         cycles = [0, 6, 12, 18]
+#         cycle_hour = max([ch for ch in cycles if ch <= now.hour], default=18)
+#         runtime = now.strftime("%Y%m%d") + f"{cycle_hour:02d}"
+#
+#         # Previous 6-hour cycle
+#         prev_time = now.replace(hour=cycle_hour) - timedelta(hours=6)
+#         prev_cycle_hour = (cycle_hour - 6) % 24
+#         prev_runtime = prev_time.strftime("%Y%m%d") + f"{prev_cycle_hour:02d}"
+#
+#         runtimes = [runtime, prev_runtime]
+#
+#         for run_id in runtimes:
+#             for fh in FORECAST_HOURS:
+#                 try:
+#                     # Construct the URL
+#                     url = (
+#                         f"https://m1o.pivotalweather.com/maps/models/"
+#                         f"{model}_full/{run_id}/{fh:03d}/{product}.{region}.png"
+#                     )
+#
+#                     # Build the desired filename and folder structure
+#                     filename = f"{run_id}_{model}_{product}_{region}_{fh}.png"
+#                     local_path = os.path.join(TEMP_DIR, filename)
+#                     remote_path = f"{AZURE_PREFIX}Models/{run_id}/{model}/{filename}"
+#
+#                     # Download image directly
+#                     urllib.request.urlretrieve(url, local_path)
+#
+#                     # Validate download size (skip empty PNGs)
+#                     if os.path.exists(local_path) and os.path.getsize(local_path) < 10000:
+#                         log(f"SKIPPED (empty file): {filename}")
+#                         os.remove(local_path)
+#                         continue
+#                     # Upload to Azure
+#                     save_to_repository(local_path, remote_path)
+#                 except Exception as e:
+#                     log(f"ERROR fetching Pivotal {model} fh={fh} run={run_id}: {e}")
+#     except Exception as e:
+#         log(f"ERROR in fetch_pivotalweather({name}): {e}")
+#
+# # ==========================
+# # PIVOTAL WEATHER FETCH (all configs)
+# # ==========================
+# def fetch_all_pivotalweather():
+#     for cfg in PIVOTAL_MODELS:
+#         fetch_pivotalweather(
+#             cfg["name"],
+#             cfg["model"],
+#             cfg["product"],
+#             cfg["region"]
+#         )
+#
+#
 # ==========================
 # NWS FETCH
 # ==========================
@@ -901,13 +1043,7 @@ async def fetch_once():
     browser = await launch(
         headless=True,
         executablePath=browser_path,
-        args=[
-            "--disable-gpu",
-            "--no-sandbox",
-            "--disable-dev-shm-usage",
-            "--no-first-run",
-            "--no-default-browser-check"
-        ]
+        args=["--disable-gpu", "--no-first-run", "--no-default-browser-check"]
     )
 
     try:
@@ -926,15 +1062,15 @@ async def fetch_once():
             })
 
         await fetch_all_tropicaltidbits(browser)
-        fetch_all_pivotalweather()
-        for fpath in TEMP_FILES[:]:
-            try:
-                os.remove(fpath)
-            except Exception as e:
-                log(f"WARNING: Could not delete {fpath}: {e}")
-            finally:
-                TEMP_FILES.remove(fpath)
+        # fetch_all_pivotalweather()
+        for filename in os.listdir(TEMP_DIR):
+            full_path = os.path.join(TEMP_DIR, filename)
 
+            if os.path.isfile(full_path) and filename.lower() != "debug.log":
+                try:
+                    os.remove(full_path)
+                except Exception as e:
+                    log(f"WARNING: Could not delete {full_path}: {e}")
         cleanup_old_repository_files()
         git_publish_repository()
         log("Fetch cycle completed.")
@@ -953,3 +1089,6 @@ if __name__ == "__main__":
         asyncio.run(fetch_once())
     except KeyboardInterrupt:
         log("Stopped by user.")
+
+# Keep terminal open after the program finishes; comment this line out if not wanted.
+# input("Press Enter to close...")

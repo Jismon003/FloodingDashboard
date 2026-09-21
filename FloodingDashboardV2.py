@@ -17,7 +17,7 @@ AZURE_PREFIX = ""
 # ==========================
 # LOGGER
 # ==========================
-DEBUG_FILE = r"D:\Spare Storage\Projects\Weather\Flooding Dashboard\Temp\debug.log"
+DEBUG_FILE = r"C:\Users\simon\Documents\Flooding Dashboard\debug.log"
 _last_log_date = None
 
 def log(message: str):
@@ -162,7 +162,7 @@ CHROME_CANDIDATES = [
     r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
 ]
 
-TEMP_DIR = r"D:\Spare Storage\Projects\Weather\Flooding Dashboard\Temp"
+TEMP_DIR = r"C:\Users\simon\Documents\Flooding Dashboard\Temp"
 os.makedirs(TEMP_DIR, exist_ok=True)
 TEMP_FILES = []
 
@@ -195,7 +195,7 @@ baseline_template = cv2.cvtColor(pattern_rgb, cv2.COLOR_RGB2BGR)
 # ==========================
 # The Python program lives in the cloned FloodingDashboard repository.
 # All published data is stored under /Data/.
-REPO_ROOT = r"D:\Spare Storage\Projects\Weather\Flooding Dashboard\FloodingDashboard"
+REPO_ROOT = r"C:\Users\simon\Documents\Flooding Dashboard\FloodingDashboard"
 DATA_DIR = os.path.join(REPO_ROOT, "Data")
 os.makedirs(DATA_DIR, exist_ok=True)
 

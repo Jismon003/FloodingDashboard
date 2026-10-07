@@ -1,0 +1,267 @@
+{
+  "storm": "NJA1905",
+  "vertical_datum": "NAVD88",
+  "resolution_m": 1.0,
+  "levels": [
+    {
+      "waterLevel": 3.1,
+      "geojson": "polygons/NJA1905_31.geojson"
+    },
+    {
+      "waterLevel": 3.2,
+      "geojson": "polygons/NJA1905_32.geojson"
+    },
+    {
+      "waterLevel": 3.3,
+      "geojson": "polygons/NJA1905_33.geojson"
+    },
+    {
+      "waterLevel": 3.4,
+      "geojson": "polygons/NJA1905_34.geojson"
+    },
+    {
+      "waterLevel": 3.5,
+      "geojson": "polygons/NJA1905_35.geojson"
+    },
+    {
+      "waterLevel": 3.6,
+      "geojson": "polygons/NJA1905_36.geojson"
+    },
+    {
+      "waterLevel": 3.7,
+      "geojson": "polygons/NJA1905_37.geojson"
+    },
+    {
+      "waterLevel": 3.8,
+      "geojson": "polygons/NJA1905_38.geojson"
+    },
+    {
+      "waterLevel": 3.9,
+      "geojson": "polygons/NJA1905_39.geojson"
+    },
+    {
+      "waterLevel": 4.0,
+      "geojson": "polygons/NJA1905_40.geojson"
+    },
+    {
+      "waterLevel": 4.1,
+      "geojson": "polygons/NJA1905_41.geojson"
+    },
+    {
+      "waterLevel": 4.2,
+      "geojson": "polygons/NJA1905_42.geojson"
+    },
+    {
+      "waterLevel": 4.3,
+      "geojson": "polygons/NJA1905_43.geojson"
+    },
+    {
+      "waterLevel": 4.4,
+      "geojson": "polygons/NJA1905_44.geojson"
+    },
+    {
+      "waterLevel": 4.5,
+      "geojson": "polygons/NJA1905_45.geojson"
+    },
+    {
+      "waterLevel": 4.6,
+      "geojson": "polygons/NJA1905_46.geojson"
+    },
+    {
+      "waterLevel": 4.7,
+      "geojson": "polygons/NJA1905_47.geojson"
+    },
+    {
+      "waterLevel": 4.8,
+      "geojson": "polygons/NJA1905_48.geojson"
+    },
+    {
+      "waterLevel": 4.9,
+      "geojson": "polygons/NJA1905_49.geojson"
+    },
+    {
+      "waterLevel": 5.0,
+      "geojson": "polygons/NJA1905_50.geojson"
+    },
+    {
+      "waterLevel": 5.1,
+      "geojson": "polygons/NJA1905_51.geojson"
+    },
+    {
+      "waterLevel": 5.2,
+      "geojson": "polygons/NJA1905_52.geojson"
+    },
+    {
+      "waterLevel": 5.3,
+      "geojson": "polygons/NJA1905_53.geojson"
+    },
+    {
+      "waterLevel": 5.4,
+      "geojson": "polygons/NJA1905_54.geojson"
+    },
+    {
+      "waterLevel": 5.5,
+      "geojson": "polygons/NJA1905_55.geojson"
+    },
+    {
+      "waterLevel": 5.6,
+      "geojson": "polygons/NJA1905_56.geojson"
+    },
+    {
+      "waterLevel": 5.7,
+      "geojson": "polygons/NJA1905_57.geojson"
+    },
+    {
+      "waterLevel": 5.8,
+      "geojson": "polygons/NJA1905_58.geojson"
+    },
+    {
+      "waterLevel": 5.9,
+      "geojson": "polygons/NJA1905_59.geojson"
+    },
+    {
+      "waterLevel": 6.0,
+      "geojson": "polygons/NJA1905_60.geojson"
+    },
+    {
+      "waterLevel": 6.1,
+      "geojson": "polygons/NJA1905_61.geojson"
+    },
+    {
+      "waterLevel": 6.2,
+      "geojson": "polygons/NJA1905_62.geojson"
+    },
+    {
+      "waterLevel": 6.3,
+      "geojson": "polygons/NJA1905_63.geojson"
+    },
+    {
+      "waterLevel": 6.4,
+      "geojson": "polygons/NJA1905_64.geojson"
+    },
+    {
+      "waterLevel": 6.5,
+      "geojson": "polygons/NJA1905_65.geojson"
+    },
+    {
+      "waterLevel": 6.6,
+      "geojson": "polygons/NJA1905_66.geojson"
+    },
+    {
+      "waterLevel": 6.7,
+      "geojson": "polygons/NJA1905_67.geojson"
+    },
+    {
+      "waterLevel": 6.8,
+      "geojson": "polygons/NJA1905_68.geojson"
+    },
+    {
+      "waterLevel": 6.9,
+      "geojson": "polygons/NJA1905_69.geojson"
+    },
+    {
+      "waterLevel": 7.0,
+      "geojson": "polygons/NJA1905_70.geojson"
+    },
+    {
+      "waterLevel": 7.1,
+      "geojson": "polygons/NJA1905_71.geojson"
+    },
+    {
+      "waterLevel": 7.2,
+      "geojson": "polygons/NJA1905_72.geojson"
+    },
+    {
+      "waterLevel": 7.3,
+      "geojson": "polygons/NJA1905_73.geojson"
+    },
+    {
+      "waterLevel": 7.4,
+      "geojson": "polygons/NJA1905_74.geojson"
+    },
+    {
+      "waterLevel": 7.5,
+      "geojson": "polygons/NJA1905_75.geojson"
+    },
+    {
+      "waterLevel": 7.6,
+      "geojson": "polygons/NJA1905_76.geojson"
+    },
+    {
+      "waterLevel": 7.7,
+      "geojson": "polygons/NJA1905_77.geojson"
+    },
+    {
+      "waterLevel": 7.8,
+      "geojson": "polygons/NJA1905_78.geojson"
+    },
+    {
+      "waterLevel": 7.9,
+      "geojson": "polygons/NJA1905_79.geojson"
+    },
+    {
+      "waterLevel": 8.0,
+      "geojson": "polygons/NJA1905_80.geojson"
+    },
+    {
+      "waterLevel": 8.1,
+      "geojson": "polygons/NJA1905_81.geojson"
+    },
+    {
+      "waterLevel": 8.2,
+      "geojson": "polygons/NJA1905_82.geojson"
+    },
+    {
+      "waterLevel": 8.3,
+      "geojson": "polygons/NJA1905_83.geojson"
+    },
+    {
+      "waterLevel": 8.4,
+      "geojson": "polygons/NJA1905_84.geojson"
+    },
+    {
+      "waterLevel": 8.5,
+      "geojson": "polygons/NJA1905_85.geojson"
+    },
+    {
+      "waterLevel": 8.6,
+      "geojson": "polygons/NJA1905_86.geojson"
+    },
+    {
+      "waterLevel": 8.7,
+      "geojson": "polygons/NJA1905_87.geojson"
+    },
+    {
+      "waterLevel": 8.8,
+      "geojson": "polygons/NJA1905_88.geojson"
+    },
+    {
+      "waterLevel": 8.9,
+      "geojson": "polygons/NJA1905_89.geojson"
+    },
+    {
+      "waterLevel": 9.0,
+      "geojson": "polygons/NJA1905_90.geojson"
+    },
+    {
+      "waterLevel": 9.1,
+      "geojson": "polygons/NJA1905_91.geojson"
+    },
+    {
+      "waterLevel": 9.2,
+      "geojson": "polygons/NJA1905_92.geojson"
+    },
+    {
+      "waterLevel": 9.3,
+      "geojson": "polygons/NJA1905_93.geojson"
+    },
+    {
+      "waterLevel": 9.4,
+      "geojson": "polygons/NJA1905_94.geojson"
+    },
+    {
+      "waterLevel": 9.5,
+      "geojson": "polygons/NJA1905_95.geojson"
+    }
+  ]
+}

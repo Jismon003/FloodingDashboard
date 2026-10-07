@@ -208,7 +208,7 @@
         try {
 
           const response = await fetch(
-            "data/flood_polygons.json",
+            "inundation map/data/flood_polygons.json",
             { cache: "no-store" }
           );
 
@@ -496,7 +496,7 @@
 
             dataSource =
               await Cesium.GeoJsonDataSource.load(
-                "data/polygons/" + selectedLevel.geojson,
+                "inundation map/data/polygons/" + selectedLevel.geojson,
                 {
                   clampToGround: false,
                 }

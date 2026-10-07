@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Google Photorealistic 3D Map</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/cesium@1.106/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
+
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #cesiumContainer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* FLOOD CONTROLS */
+
+    #floodControls {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      z-index: 1000;
+
+      width: 300px;
+
+      padding: 15px;
+
+      background: rgba(30, 30, 30, 0.90);
+      color: white;
+
+      border-radius: 6px;
+
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+    }
+
+    #floodControls h3 {
+      margin: 0 0 12px 0;
+      font-size: 17px;
+    }
+
+    #floodControls label {
+      display: block;
+      margin-top: 10px;
+      margin-bottom: 4px;
+    }
+
+    #floodLevel {
+      width: 100%;
+    }
+
+    #floodLevelValue {
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 5px;
+    }
+
+    #floodToggle {
+      margin-right: 6px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="cesiumContainer"></div>
+
+  <div id="floodControls">
+
+    <h3>Flood Inundation</h3>
+
+    <label>
+      <input type="checkbox" id="floodToggle">
+      Flood Overlay
+    </label>
+
+    <label for="floodLevel">
+      Water Elevation
+    </label>
+
+    <input type="range" id="floodLevel" min="5.2" max="11.6" step="0.1" value="7.3" />
+    <button id="floodBack">−0.1</button>
+    <button id="floodForward">+0.1</button>
+    <div id="floodLevelValue">
+      6.8 ft MLLW
+    </div>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/cesium@1.106/Build/Cesium/Cesium.js"></script>
+
+  <script>
+    (async function () {
+
+      Cesium.Ion.defaultAccessToken =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiYTIwZjIxMy04NDdiLTQ5ZWQtYmUwYS0yNzQxYmQ0MDZlYTMiLCJpZCI6MjEwNjcyLCJpYXQiOjE3MTM4NzQ3NTF9.LAzV-B4xKBkV4n3QZG9HnLarvmdGnm55ia0KVR_jufU";
+
+
+      const viewer = new Cesium.Viewer("cesiumContainer", {
+        globe: false,
+        skyAtmosphere: new Cesium.SkyAtmosphere(),
+        sceneModePicker: false,
+        baseLayerPicker: false,
+        timeline: false,
+        animation: false,
+      });
+
+
+      // Center the view over Monmouth County, NJ
+
+      viewer.camera.setView({
+        destination: Cesium.Cartesian3.fromDegrees(-74.00, 40.36, 25000),
+        orientation: {
+          heading: Cesium.Math.toRadians(0.0),
+          roll: 0.0,
+        },
+      });
+
+
+      // Override Home button
+
+      viewer.homeButton.viewModel.command.beforeExecute.addEventListener(function (e) {
+
+        e.cancel = true;
+
+        viewer.camera.flyTo({
+
+          destination: Cesium.Cartesian3.fromDegrees(-74.12, 40.29, 100000),
+
+          orientation: {
+            heading: Cesium.Math.toRadians(0.0),
+            roll: 0.0,
+          },
+
+          duration: 2.5,
+
+        });
+
+      });
+
+
+      // ============================================================
+      // EXISTING GOOGLE PHOTOREALISTIC 3D TILESET
+      // ============================================================
+
+      try {
+
+        const tileset = viewer.scene.primitives.add(
+          await Cesium.Cesium3DTileset.fromIonAssetId(2275207)
+        );
+
+      } catch (error) {
+
+        console.error("Error loading tileset:", error);
+
+      }
+
+
+      // ============================================================
+      // FLOOD INUNDATION SYSTEM
+      // ============================================================
+
+      let floodLayer = null;
+      let floodData = null;
+      let floodLevelCache = new Map();
+
+      // Flood data is stored in NAVD88.
+      // The user interface is displayed in MLLW.
+      const MLLW_TO_NAVD88 = -2.098;
+
+
+      function mllwToNavd88(mllw) {
+
+        return mllw + MLLW_TO_NAVD88;
+
+      }
+
+
+      function navd88ToMllw(navd88) {
+
+        return navd88 - MLLW_TO_NAVD88;
+
+      }
+
+
+      // ============================================================
+      // LOAD FLOOD POLYGON INDEX
+      // ============================================================
+
+      async function loadFloodData() {
+
+        try {
+
+          const response = await fetch(
+            "data/flood_polygons.json",
+            { cache: "no-store" }
+          );
+
+
+          if (!response.ok) {
+
+            throw new Error(
+              "HTTP " + response.status
+            );
+
+          }
+
+
+          floodData = await response.json();
+
+
+          if (!floodData.levels || !floodData.levels.length) {
+
+            throw new Error(
+              "No flood polygon levels found"
+            );
+
+          }
+
+
+          // The polygon index contains NAVD88 levels.
+          const levels = floodData.levels
+            .map(function (item) {
+              return Number(item.waterLevel);
+            })
+            .filter(Number.isFinite)
+            .sort(function (a, b) {
+              return a - b;
+            });
+
+
+          // Set the UI limits in MLLW.
+          document.getElementById("floodLevel").min =
+            navd88ToMllw(levels[0]).toFixed(1);
+
+
+          document.getElementById("floodLevel").max =
+            navd88ToMllw(levels[levels.length - 1]).toFixed(1);
+
+
+        } catch (error) {
+
+          console.error(
+            "Error loading flood data:",
+            error
+          );
+
+
+          floodData = null;
+
+        }
+
+      }
+
+
+      // ============================================================
+      // FIND CLOSEST NAVD88 POLYGON LEVEL
+      // ============================================================
+
+      function findFloodLevel(requestedNavd88) {
+
+        if (!floodData || !floodData.levels) {
+
+          return null;
+
+        }
+
+
+        let closest = null;
+        let smallestDifference = Infinity;
+
+
+        for (const level of floodData.levels) {
+
+          const difference =
+            Math.abs(
+              Number(level.waterLevel) -
+              requestedNavd88
+            );
+
+
+          if (difference < smallestDifference) {
+
+            smallestDifference = difference;
+            closest = level;
+
+          }
+
+        }
+
+
+        return closest;
+
+      }
+
+
+      // ============================================================
+      // BUILD FLOOD GROUND PRIMITIVE
+      // ============================================================
+
+      function buildFloodPrimitive(dataSource) {
+
+        const entities =
+          dataSource.entities.values;
+
+
+        const geometryInstances = [];
+
+
+        for (const entity of entities) {
+
+          if (!entity.polygon) {
+
+            continue;
+
+          }
+
+
+          const hierarchy =
+            entity.polygon.hierarchy.getValue(
+              viewer.clock.currentTime
+            );
+
+
+          if (!hierarchy || !hierarchy.positions) {
+
+            continue;
+
+          }
+
+
+          try {
+
+            const geometry =
+              new Cesium.PolygonGeometry({
+
+                polygonHierarchy:
+                  hierarchy,
+
+                vertexFormat:
+                  Cesium.PerInstanceColorAppearance.FLAT_VERTEX_FORMAT,
+
+              });
+
+
+            const geometryInstance =
+              new Cesium.GeometryInstance({
+
+                geometry:
+                  geometry,
+
+                attributes: {
+
+                  color:
+                    Cesium.ColorGeometryInstanceAttribute.fromColor(
+                      Cesium.Color.BLUE.withAlpha(0.60)
+                    ),
+
+                },
+
+              });
+
+
+            geometryInstances.push(
+              geometryInstance
+            );
+
+
+          } catch (error) {
+
+            console.error(
+              "Error creating flood polygon geometry:",
+              error
+            );
+
+          }
+
+        }
+
+
+        if (!geometryInstances.length) {
+
+          throw new Error(
+            "No polygon geometries found in flood GeoJSON"
+          );
+
+        }
+
+
+        return new Cesium.GroundPrimitive({
+
+          geometryInstances:
+            geometryInstances,
+
+          classificationType:
+            Cesium.ClassificationType.CESIUM_3D_TILE,
+
+          appearance:
+            new Cesium.PerInstanceColorAppearance({
+
+              flat: true,
+
+              translucent: true,
+
+              closed: false,
+
+            }),
+
+          asynchronous: true,
+
+          releaseGeometryInstances: true,
+
+        });
+
+      }
+
+
+      // ============================================================
+      // DISPLAY FLOOD POLYGON
+      // ============================================================
+
+      async function updateFloodLayer(waterLevelMllw) {
+
+        const waterLevelNavd88 =
+          Math.round(
+            mllwToNavd88(waterLevelMllw) * 10
+          ) / 10;
+
+
+        document.getElementById("floodLevelValue").innerText =
+          (waterLevelMllw - 0.5).toFixed(1) + " ft MLLW";
+
+
+        if (!document.getElementById("floodToggle").checked) {
+
+          if (floodLayer) {
+
+            viewer.scene.primitives.remove(
+              floodLayer
+            );
+
+            floodLayer = null;
+
+          }
+
+
+          return;
+
+        }
+
+
+        if (!floodData) {
+
+          return;
+
+        }
+
+
+        const selectedLevel =
+          findFloodLevel(waterLevelNavd88);
+
+
+        if (!selectedLevel) {
+
+          return;
+
+        }
+
+
+        try {
+
+          let dataSource =
+            floodLevelCache.get(
+              Number(selectedLevel.waterLevel)
+            );
+
+
+          if (!dataSource) {
+
+
+            dataSource =
+              await Cesium.GeoJsonDataSource.load(
+                "data/polygons/" + selectedLevel.geojson,
+                {
+                  clampToGround: false,
+                }
+              );
+
+
+            floodLevelCache.set(
+              Number(selectedLevel.waterLevel),
+              dataSource
+            );
+
+          }
+
+
+          if (floodLayer) {
+
+            viewer.scene.primitives.remove(
+              floodLayer
+            );
+
+            floodLayer = null;
+
+          }
+
+          floodLayer =
+            buildFloodPrimitive(
+              dataSource
+            );
+
+
+          viewer.scene.primitives.add(
+            floodLayer
+          );
+
+          viewer.scene.requestRender();
+
+
+        } catch (error) {
+
+          console.error(
+            "Error displaying flood polygon:",
+            error
+          );
+
+        }
+
+      }
+
+
+      // ============================================================
+      // FLOOD SLIDER
+      // ============================================================
+
+      const floodLevel =
+        document.getElementById("floodLevel");
+
+
+      floodLevel.addEventListener(
+        "input",
+        function () {
+
+          const level =
+            parseFloat(this.value);
+
+
+          updateFloodLayer(level);
+
+        }
+      );
+
+      document.getElementById("floodBack").addEventListener("click", function () {
+        let level = parseFloat(floodLevel.value);
+        level = Math.max(parseFloat(floodLevel.min), Math.round((level - 0.1) * 10) / 10);
+        floodLevel.value = level.toFixed(1);
+        floodLevel.dispatchEvent(new Event("input"));
+      });
+
+      document.getElementById("floodForward").addEventListener("click", function () {
+        let level = parseFloat(floodLevel.value);
+        level = Math.min(parseFloat(floodLevel.max), Math.round((level + 0.1) * 10) / 10);
+        floodLevel.value = level.toFixed(1);
+        floodLevel.dispatchEvent(new Event("input"));
+      });
+      // ============================================================
+      // FLOOD TOGGLE
+      // ============================================================
+
+      document.getElementById("floodToggle")
+        .addEventListener(
+          "change",
+          function () {
+
+            const level =
+              parseFloat(floodLevel.value);
+
+
+            updateFloodLayer(level);
+
+          }
+        );
+
+
+      // ============================================================
+      // LOAD FLOOD DATA
+      // ============================================================
+
+      await loadFloodData();
+
+
+    })();
+  </script>
+
+</body>
+
+</html>

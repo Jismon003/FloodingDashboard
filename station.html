@@ -116,14 +116,10 @@
 
         @media (max-width: 768px) {
             #controls {
-                position: fixed !important;
-                top: auto;
-                bottom: 0;
-                left: 0;
+                position: static;
                 width: 100%;
+                margin-top: 0;
                 box-sizing: border-box;
-                z-index: 99999;
-                padding-bottom: calc(15px + env(safe-area-inset-bottom));
             }
         }
 
@@ -952,6 +948,12 @@
             preloadAndSwapImage(surgeEl, group.surge);
             preloadAndSwapImage(petssEl, group.petss);
             preloadAndSwapImage(modelEl, group.model, `${group.modelExpected} unavailable`);
+            if (window.innerWidth <= 768) {
+                tideEl.parentElement.after(controlsDiv);
+            }
+            if (window.innerWidth <= 768) {
+                tideEl.after(controlsDiv);
+            }
             const station = cwd.split("/").filter(Boolean).pop().replace(/ /g, "_");
             const nwsMap = {
                 "Sea_Bright": "sbin4",

@@ -113,13 +113,19 @@
             position: sticky;
             bottom: 0;
         }
-
         @media (max-width: 768px) {
             #controls {
-                position: static;
+                position: fixed;
+                bottom: 0;
+                left: 0;
                 width: 100%;
-                margin-top: 0;
                 box-sizing: border-box;
+                z-index: 5000;
+                padding-bottom: calc(15px + env(safe-area-inset-bottom));
+            }
+
+            body {
+                padding-bottom: 80px;
             }
         }
 
@@ -606,31 +612,6 @@
         const gridDiv = document.getElementById("grid");
 
         // --- UTILITIES ---
-
-        function positionMobileControls() {
-            if (window.innerWidth > 768) return;
-
-            const controls = document.getElementById("controls");
-            const viewport = window.visualViewport;
-
-            if (!controls || !viewport) return;
-
-            controls.style.position = "fixed";
-            controls.style.left = `${viewport.offsetLeft}px`;
-            controls.style.width = `${viewport.width}px`;
-            controls.style.top =
-                `${viewport.offsetTop + viewport.height - controls.offsetHeight}px`;
-            controls.style.bottom = "auto";
-        }
-
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener("resize", positionMobileControls);
-            window.visualViewport.addEventListener("scroll", positionMobileControls);
-        }
-
-        window.addEventListener("orientationchange", () => {
-            setTimeout(positionMobileControls, 100);
-        });
         function buildBlobUrl(path) {
             const cleanPath = path.replace(/^\/+/, "");
             return `${accountUrl}/${container}/${cleanPath}`;
@@ -699,7 +680,6 @@
             document.getElementById("dateSelector").style.display = "block";
             document.getElementById("viewer").style.display = "flex";
             document.getElementById("controls").style.display = "flex";
-            positionMobileControls();
             document.getElementById("menuToggle").style.display = "block";
             const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" }).replace(/-/g, "");
             if (forecastDates.includes(todayStr)) {
@@ -948,12 +928,6 @@
             preloadAndSwapImage(surgeEl, group.surge);
             preloadAndSwapImage(petssEl, group.petss);
             preloadAndSwapImage(modelEl, group.model, `${group.modelExpected} unavailable`);
-            if (window.innerWidth <= 768) {
-                tideEl.parentElement.after(controlsDiv);
-            }
-            if (window.innerWidth <= 768) {
-                tideEl.after(controlsDiv);
-            }
             const station = cwd.split("/").filter(Boolean).pop().replace(/ /g, "_");
             const nwsMap = {
                 "Sea_Bright": "sbin4",
@@ -1239,6 +1213,11 @@
                 document.body.classList.remove("force-grid");
             }
 
+            // 🔄 Force reflow to reset sticky positioning
+            controlsDiv.style.position = "static";   // temporarily disable sticky
+            void controlsDiv.offsetHeight;           // trigger a reflow
+            controlsDiv.style.position = "sticky";   // restore sticky
+            controlsDiv.style.bottom = "0";          // make sure it's anchored
         }
 
         document.addEventListener("DOMContentLoaded", () => {

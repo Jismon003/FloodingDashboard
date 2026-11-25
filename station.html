@@ -113,6 +113,21 @@
             position: sticky;
             bottom: 0;
         }
+        @media (max-width: 768px) {
+            #controls {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                box-sizing: border-box;
+                z-index: 5000;
+                padding-bottom: calc(15px + env(safe-area-inset-bottom));
+            }
+
+            body {
+                padding-bottom: 80px;
+            }
+        }
 
         #controls button {
             font-size: 16px;
